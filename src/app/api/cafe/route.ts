@@ -5,7 +5,19 @@ import { getCurrentUser } from '@/lib/auth'
 export async function GET() {
   try {
     const cafe = await prisma.cafe.findFirst()
-    return NextResponse.json(cafe)
+    if (!cafe) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    // Parse JSON strings for SQLite compatibility
+    const parsedCafe = {
+      ...cafe,
+      openingHours: cafe.openingHours ? JSON.parse(cafe.openingHours as string) : null,
+      socialLinks: cafe.socialLinks ? JSON.parse(cafe.socialLinks as string) : null,
+      dailySpecial: cafe.dailySpecial ? JSON.parse(cafe.dailySpecial as string) : null,
+    }
+
+    return NextResponse.json(parsedCafe)
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -33,9 +45,9 @@ export async function PUT(request: Request) {
         primaryColor: data.primaryColor,
         secondaryColor: data.secondaryColor,
         language: data.language,
-        openingHours: data.openingHours,
-        socialLinks: data.socialLinks,
-        dailySpecial: data.dailySpecial,
+        openingHours: data.openingHours ? JSON.stringify(data.openingHours) : null,
+        socialLinks: data.socialLinks ? JSON.stringify(data.socialLinks) : null,
+        dailySpecial: data.dailySpecial ? JSON.stringify(data.dailySpecial) : null,
         dailySpecialUpdatedAt: data.dailySpecialUpdatedAt,
         mapEmbed: data.mapEmbed,
         aboutTitle: data.aboutTitle,
@@ -54,9 +66,9 @@ export async function PUT(request: Request) {
         primaryColor: data.primaryColor || '#C9A962',
         secondaryColor: data.secondaryColor || '#3D2914',
         language: data.language || 'en',
-        openingHours: data.openingHours,
-        socialLinks: data.socialLinks,
-        dailySpecial: data.dailySpecial,
+        openingHours: data.openingHours ? JSON.stringify(data.openingHours) : null,
+        socialLinks: data.socialLinks ? JSON.stringify(data.socialLinks) : null,
+        dailySpecial: data.dailySpecial ? JSON.stringify(data.dailySpecial) : null,
         dailySpecialUpdatedAt: data.dailySpecialUpdatedAt,
         mapEmbed: data.mapEmbed,
         aboutTitle: data.aboutTitle,
@@ -65,7 +77,15 @@ export async function PUT(request: Request) {
       },
     })
 
-    return NextResponse.json(cafe)
+    // Parse JSON strings for response
+    const parsedCafe = {
+      ...cafe,
+      openingHours: cafe.openingHours ? JSON.parse(cafe.openingHours as string) : null,
+      socialLinks: cafe.socialLinks ? JSON.parse(cafe.socialLinks as string) : null,
+      dailySpecial: cafe.dailySpecial ? JSON.parse(cafe.dailySpecial as string) : null,
+    }
+
+    return NextResponse.json(parsedCafe)
   } catch (error) {
     console.error('Update cafe error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

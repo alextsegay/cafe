@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -20,13 +20,13 @@ model Cafe {
   primaryColor  String   @default("#C9A962")
   secondaryColor String @default("#3D2914")
   language      String   @default("en")
-  openingHours  Json?
-  socialLinks   Json?
-  dailySpecial  Json?
+  openingHours  String?
+  socialLinks   String?
+  dailySpecial  String?
   dailySpecialUpdatedAt DateTime?
-  mapEmbed      String?   @db.Text
+  mapEmbed      String?
   aboutTitle    String?
-  aboutDescription String? @db.Text
+  aboutDescription String?
   aboutImage    String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
