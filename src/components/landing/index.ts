@@ -1,0 +1,6 @@
+export { Hero } from './Hero'
+export { About } from './About'
+export { FeaturedMenu } from './FeaturedMenu'
+export { GallerySection } from './Gallery'
+export { Testimonials } from './Testimonials'
+export { Contact } from './Contact'

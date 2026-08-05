@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Cafe {
+  id            String   @id @default(cuid())
+  name          String   @default("Premium Café")
+  slug          String   @unique
+  logo          String?
+  heroImage     String?
+  tagline       String?
+  address       String?
+  phone         String?
+  email         String?
+  primaryColor  String   @default("#C9A962")
+  secondaryColor String @default("#3D2914")
+  language      String   @default("en")
+  openingHours  Json?
+  socialLinks   Json?
+  dailySpecial  Json?
+  dailySpecialUpdatedAt DateTime?
+  mapEmbed      String?   @db.Text
+  aboutTitle    String?
+  aboutDescription String? @db.Text
+  aboutImage    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  nameAm    String?     @default("")
+  icon      String?
+  order     Int         @default(0)
+  menuItems MenuItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  name        String
+  nameAm      String?   @default("")
+  description String?
+  descriptionAm String? @default("")
+  price       Float
+  image       String?
+  popular     Boolean  @default(false)
+  isNew       Boolean  @default(false)
+  available   Boolean  @default(true)
+  ingredients String?
+  ingredientsAm String? @default("")
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Gallery {
+  id        String   @id @default(cuid())
+  image     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  subject   String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String
+  name              String?
+  role              String   @default("admin")
+  resetToken        String?
+  resetTokenExpires DateTime?
+  loginAttempts     Int      @default(0)
+  lockedUntil       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
