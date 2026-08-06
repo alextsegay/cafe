@@ -28,7 +28,7 @@ async function main() {
       address: '123 Coffee Street, Downtown',
       phone: '+1 234 567 890',
       email: 'hello@premiumcafe.com',
-      openingHours: JSON.stringify({
+      openingHours: {
         monday: { open: '07:00', close: '22:00' },
         tuesday: { open: '07:00', close: '22:00' },
         wednesday: { open: '07:00', close: '22:00' },
@@ -36,12 +36,12 @@ async function main() {
         friday: { open: '07:00', close: '23:00' },
         saturday: { open: '08:00', close: '23:00' },
         sunday: { open: '08:00', close: '21:00' },
-      }),
-      socialLinks: JSON.stringify({
+      },
+      socialLinks: {
         instagram: 'https://instagram.com/premiumcafe',
         facebook: 'https://facebook.com/premiumcafe',
         twitter: 'https://twitter.com/premiumcafe',
-      }),
+      },
     },
   })
 

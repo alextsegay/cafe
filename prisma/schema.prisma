@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -20,9 +20,9 @@ model Cafe {
   primaryColor  String   @default("#C9A962")
   secondaryColor String @default("#3D2914")
   language      String   @default("en")
-  openingHours  String?
-  socialLinks   String?
-  dailySpecial  String?
+  openingHours  Json?
+  socialLinks   Json?
+  dailySpecial  Json?
   dailySpecialUpdatedAt DateTime?
   mapEmbed      String?
   aboutTitle    String?
