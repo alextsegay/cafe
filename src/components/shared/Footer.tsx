@@ -40,15 +40,14 @@ export function Footer({
 
   return (
     <footer className="relative bg-gradient-to-b from-transparent to-black/5 dark:to-white/5">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* Brand */}
-          <div className="space-y-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
+            <div className="col-span-2 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
                 <span className="text-white font-bold text-xl">P</span>
               </div>
-              <span className="font-display text-2xl font-semibold">{cafeName}</span>
+              <span className="font-display text-xl sm:text-2xl font-semibold">{cafeName}</span>
             </div>
             <p className="text-sm text-muted-foreground">
               {t('hero.tagline')}
@@ -142,16 +141,16 @@ export function Footer({
                 <Clock className="w-5 h-5 text-amber-500" />
                 {t('contact.hours')}
               </h4>
-              <ul className="space-y-2">
-                <li className="flex justify-between text-sm">
+              <ul className="space-y-2 text-sm">
+                <li className="flex justify-between gap-2">
                   <span className="text-muted-foreground">Mon - Fri</span>
                   <span>{formatTime(openingHours.monday.open)} - {formatTime(openingHours.monday.close)}</span>
                 </li>
-                <li className="flex justify-between text-sm">
+                <li className="flex justify-between gap-2">
                   <span className="text-muted-foreground">Saturday</span>
                   <span>{formatTime(openingHours.saturday.open)} - {formatTime(openingHours.saturday.close)}</span>
                 </li>
-                <li className="flex justify-between text-sm">
+                <li className="flex justify-between gap-2">
                   <span className="text-muted-foreground">Sunday</span>
                   <span>{formatTime(openingHours.sunday.open)} - {formatTime(openingHours.sunday.close)}</span>
                 </li>

@@ -38,7 +38,7 @@ export function GallerySection({
 
   return (
     <>
-      <section id="gallery" className="py-24 md:py-32">
+      <section id="gallery" className="py-16 sm:py-24 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <motion.div
@@ -51,7 +51,7 @@ export function GallerySection({
             <span className="text-amber-600 font-medium tracking-wider uppercase text-sm">
               {t('nav.gallery')}
             </span>
-            <h2 className="font-display text-4xl md:text-5xl font-bold mt-2">
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-2">
               {displayTitle}
             </h2>
             <p className="text-lg text-muted-foreground mt-4">
@@ -60,7 +60,7 @@ export function GallerySection({
           </motion.div>
 
           {/* Gallery Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
             {images.slice(0, 6).map((image, i) => (
               <motion.div
                 key={image.id}
@@ -107,7 +107,7 @@ export function GallerySection({
             {/* Close Button */}
             <button
               onClick={closeLightbox}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
             >
               <X className="w-6 h-6 text-white" />
             </button>
@@ -115,13 +115,13 @@ export function GallerySection({
             {/* Navigation */}
             <button
               onClick={(e) => { e.stopPropagation(); goPrev() }}
-              className="absolute left-4 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
             >
               <ChevronLeft className="w-6 h-6 text-white" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); goNext() }}
-              className="absolute right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-2 sm:p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
             >
               <ChevronRight className="w-6 h-6 text-white" />
             </button>

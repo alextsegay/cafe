@@ -59,7 +59,7 @@ export function Testimonials({
   const displaySubtitle = subtitle || t('testimonials.subtitle')
 
   return (
-    <section className="py-24 md:py-32 bg-gradient-to-b from-transparent via-cream/20 to-transparent">
+    <section className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-transparent via-cream/20 to-transparent">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -72,7 +72,7 @@ export function Testimonials({
           <span className="text-amber-600 font-medium tracking-wider uppercase text-sm">
             {t('testimonials.label')}
           </span>
-          <h2 className="font-display text-4xl md:text-5xl font-bold mt-2">
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-2">
             {displayTitle}
           </h2>
           <p className="text-lg text-muted-foreground mt-4">
@@ -81,7 +81,7 @@ export function Testimonials({
         </motion.div>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           {testimonials.map((testimonial, i) => (
             <motion.div
               key={testimonial.id}

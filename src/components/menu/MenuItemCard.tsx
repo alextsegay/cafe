@@ -168,14 +168,14 @@ export function MenuClient({ cafeName, categories, menuItems, dailySpecial }: Me
               <Sparkles className="w-5 h-5" />
             </div>
 
-            <div className="relative z-10 p-6 sm:p-8">
-              <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="relative z-10 p-4 sm:p-8">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                 {/* Image */}
                 {dailySpecial.image && (
                   <motion.div
                     whileHover={{ scale: 1.05, rotate: 2 }}
                     transition={{ type: "spring", stiffness: 300 }}
-                    className="relative w-32 h-32 sm:w-40 sm:h-40 rounded-2xl overflow-hidden shadow-xl flex-shrink-0"
+                    className="relative w-28 h-28 sm:w-40 sm:h-40 rounded-2xl overflow-hidden shadow-xl flex-shrink-0"
                   >
                     <Image
                       src={dailySpecial.image}
@@ -193,14 +193,14 @@ export function MenuClient({ cafeName, categories, menuItems, dailySpecial }: Me
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                   >
-                    <Badge variant="warning" className="mb-3 text-base font-semibold px-4 py-1.5 bg-white/20 backdrop-blur-sm border-2 border-white/30">
-                      <Flame className="w-4 h-4 mr-2 inline" />
+                    <Badge variant="warning" className="mb-2 sm:mb-3 text-xs sm:text-base font-semibold px-3 sm:px-4 py-1 sm:py-1.5 bg-white/20 backdrop-blur-sm border-2 border-white/30">
+                      <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 inline" />
                       {t('menu.dailySpecial')}
                     </Badge>
-                    <h3 className="font-display text-3xl sm:text-4xl font-bold text-white drop-shadow-lg mb-2">
+                    <h3 className="font-display text-2xl sm:text-4xl font-bold text-white drop-shadow-lg mb-1 sm:mb-2">
                       {dailySpecial.name}
                     </h3>
-                    <p className="text-white/90 text-base sm:text-lg mb-3 max-w-xl">
+                    <p className="text-white/90 text-sm sm:text-lg mb-2 sm:mb-3 max-w-xl">
                       {dailySpecial.description}
                     </p>
                     <motion.div
@@ -208,7 +208,7 @@ export function MenuClient({ cafeName, categories, menuItems, dailySpecial }: Me
                       transition={{ duration: 2, repeat: Infinity }}
                       className="inline-block"
                     >
-                      <span className="text-4xl sm:text-5xl font-extrabold text-white drop-shadow-2xl">
+                      <span className="text-3xl sm:text-5xl font-extrabold text-white drop-shadow-2xl">
                         {formatPrice(dailySpecial.price)}
                       </span>
                     </motion.div>

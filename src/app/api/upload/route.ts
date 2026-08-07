@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
 import { requireAuth } from '@/lib/auth'
+import cloudinary from '@/lib/cloudinary'
 
 export async function POST(request: Request) {
   try {
@@ -27,21 +26,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File too large. Maximum size is 5MB.' }, { status: 400 })
     }
 
+    // Convert file to base64 data URI and upload to Cloudinary
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
+    const base64 = buffer.toString('base64')
+    const dataURI = `data:${file.type};base64,${base64}`
 
-    const uploadsDir = join(process.cwd(), 'public', 'uploads')
-    await mkdir(uploadsDir, { recursive: true })
+    const result = await cloudinary.uploader.upload(dataURI, {
+      folder: 'cafe-uploads',
+      transformation: [{ width: 1200, crop: 'limit', quality: 'auto' }],
+    })
 
-    // Sanitize filename
-    const sanitized = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const filename = `${Date.now()}-${sanitized}`
-    const filepath = join(uploadsDir, filename)
-
-    await writeFile(filepath, buffer)
-
-    const url = `/uploads/${filename}`
-    return NextResponse.json({ url })
+    return NextResponse.json({ url: result.secure_url })
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

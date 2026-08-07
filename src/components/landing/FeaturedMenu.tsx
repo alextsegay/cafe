@@ -28,7 +28,7 @@ export function FeaturedMenu({
   const displaySubtitle = subtitle || t('menu.featuredSubtitle')
 
   return (
-    <section id="menu" className="py-24 md:py-32 bg-gradient-to-b from-transparent via-amber-50/30 to-transparent dark:via-amber-900/5">
+    <section id="menu" className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-transparent via-amber-50/30 to-transparent dark:via-amber-900/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -41,7 +41,7 @@ export function FeaturedMenu({
           <span className="text-amber-600 font-medium tracking-wider uppercase text-sm">
             {t('menu.selection')}
           </span>
-          <h2 className="font-display text-4xl md:text-5xl font-bold mt-2">
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-2">
             {displayTitle}
           </h2>
           <p className="text-lg text-muted-foreground mt-4">

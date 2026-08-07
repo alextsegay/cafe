@@ -29,9 +29,9 @@ export function About({
   ]
 
   return (
-    <section id="about" className="py-24 md:py-32">
+    <section id="about" className="py-16 sm:py-24 md:py-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div ref={ref} className="grid lg:grid-cols-2 gap-16 items-center">
+        <div ref={ref} className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Image */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
@@ -56,7 +56,7 @@ export function About({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={isInView ? { opacity: 1, scale: 1 } : {}}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="absolute -right-4 md:-right-8 top-1/4 glass rounded-2xl p-6 shadow-xl"
+              className="absolute -right-2 sm:-right-4 md:-right-8 top-1/4 glass rounded-2xl p-4 sm:p-6 shadow-xl"
             >
               <div className="flex gap-8">
                 {features.slice(0, 2).map((stat, i) => (
@@ -80,7 +80,7 @@ export function About({
               <span className="text-amber-600 font-medium tracking-wider uppercase text-sm">
                 {t('about.subtitle')}
               </span>
-              <h2 className="font-display text-4xl md:text-5xl font-bold mt-2">
+              <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-2">
                 {displayTitle}
               </h2>
             </div>
@@ -89,7 +89,7 @@ export function About({
               {displayDescription}
             </p>
 
-            <div className="grid grid-cols-3 gap-6 pt-4">
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 pt-4">
               {features.map((feature, i) => (
                 <motion.div
                   key={i}
