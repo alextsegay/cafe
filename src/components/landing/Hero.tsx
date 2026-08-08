@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { ChevronDown, Sparkles } from 'lucide-react'
 import { motion, useInView } from 'framer-motion'
 import { useI18n } from '@/lib/i18n'
+import config from '@/lib/config'
 
 interface HeroProps {
   heroImage?: string
@@ -13,10 +14,11 @@ interface HeroProps {
   tagline?: string
 }
 
-export function Hero({ heroImage, cafeName = 'Premium Café', tagline }: HeroProps) {
+export function Hero({ heroImage, cafeName, tagline }: HeroProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true })
   const { t } = useI18n()
+  const displayCafeName = cafeName || config.cafe.name
   const displayTagline = tagline || t('hero.tagline')
 
   return (
@@ -24,7 +26,7 @@ export function Hero({ heroImage, cafeName = 'Premium Café', tagline }: HeroPro
       {/* Background Image */}
       <div className="absolute inset-0">
         <Image
-          src={heroImage || 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=1920&q=80'}
+          src={heroImage || config.images.hero}
           alt="Café Interior"
           fill
           className="object-cover"
@@ -59,7 +61,7 @@ export function Hero({ heroImage, cafeName = 'Premium Café', tagline }: HeroPro
             transition={{ duration: 0.8, delay: 0.3 }}
             className="font-display text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-bold leading-tight"
           >
-            {cafeName}
+            {displayCafeName}
           </motion.h1>
 
           {/* Tagline */}

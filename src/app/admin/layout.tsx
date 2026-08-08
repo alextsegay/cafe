@@ -20,16 +20,18 @@ import {
   Bell,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import config from '@/lib/config'
+import { useI18n } from '@/lib/i18n'
 
 const navItems = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/menu', label: 'Menu', icon: UtensilsCrossed },
-  { href: '/admin/categories', label: 'Categories', icon: FolderTree },
-  { href: '/admin/gallery', label: 'Gallery', icon: Images },
-  { href: '/admin/contact', label: 'Messages', icon: MessageSquare },
-  { href: '/admin/notifications', label: 'Notifications', icon: Bell },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
-  { href: '/admin/qrcode', label: 'QR Code', icon: QrCode },
+  { href: '/admin/dashboard', labelKey: 'admin.dashboard', icon: LayoutDashboard },
+  { href: '/admin/menu', labelKey: 'admin.menu', icon: UtensilsCrossed },
+  { href: '/admin/categories', labelKey: 'admin.categories', icon: FolderTree },
+  { href: '/admin/gallery', labelKey: 'admin.gallery', icon: Images },
+  { href: '/admin/contact', labelKey: 'admin.messages', icon: MessageSquare },
+  { href: '/admin/notifications', labelKey: 'admin.notifications', icon: Bell },
+  { href: '/admin/settings', labelKey: 'admin.settings', icon: Settings },
+  { href: '/admin/qrcode', labelKey: 'admin.qrCode', icon: QrCode },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [user, setUser] = useState<{ email: string; name: string } | null>(null)
   const router = useRouter()
   const pathname = usePathname()
+  const { t } = useI18n()
 
   useEffect(() => {
     checkAuth()
@@ -96,11 +99,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
           <Menu className="w-6 h-6" />
         </button>
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">P</span>
+            <span className="text-white font-bold text-sm">{config.cafe.name.charAt(0)}</span>
           </div>
-          <span className="font-semibold">Admin</span>
+          <span className="font-semibold">{config.cafe.name}</span>
         </div>
         <div className="w-10" />
       </header>
@@ -126,9 +129,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-lg">P</span>
+              <span className="text-white font-bold text-lg">{config.cafe.name.charAt(0)}</span>
             </div>
-            {!isSidebarCollapsed && <span className="font-display text-xl font-semibold">Admin</span>}
+            {!isSidebarCollapsed && <span className="font-display text-xl font-semibold">{config.cafe.name}</span>}
           </Link>
           <div className="flex items-center gap-2">
             <button
@@ -162,10 +165,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
                   isSidebarCollapsed && 'justify-center px-3'
                 )}
-                title={isSidebarCollapsed ? item.label : undefined}
-              >
-                <item.icon className="w-5 h-5 shrink-0" />
-                {!isSidebarCollapsed && <span className="font-medium">{item.label}</span>}
+                title={isSidebarCollapsed ? t(item.labelKey) : undefined}
+               >
+                 <item.icon className="w-5 h-5 shrink-0" />
+                 {!isSidebarCollapsed && <span className="font-medium">{t(item.labelKey)}</span>}
               </Link>
             )
           })}
@@ -182,12 +185,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               )}
             >
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shrink-0">
-                <span className="text-white font-bold">A</span>
+                <span className="text-white font-bold">{user?.name?.charAt(0) || config.cafe.name.charAt(0)}</span>
               </div>
               {!isSidebarCollapsed && (
                 <>
                   <div className="flex-1 text-left">
-                    <p className="font-medium text-sm">{user?.name || 'Admin'}</p>
+                    <p className="font-medium text-sm">{user?.name || config.cafe.name}</p>
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                   <ChevronDown className={cn('w-4 h-4 transition-transform', isUserMenuOpen && 'rotate-180')} />
@@ -201,14 +204,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   href="/"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <span className="text-sm">View Website</span>
+                  <span className="text-sm">{t('admin.viewWebsite')}</span>
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-red-600"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span className="text-sm">Logout</span>
+                  <span className="text-sm">{t('admin.logout')}</span>
                 </button>
               </div>
             )}

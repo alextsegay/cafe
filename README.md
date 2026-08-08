@@ -64,11 +64,32 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env` with your database URL:
+Edit `.env` with your database URL and cafe configuration:
 ```
 DATABASE_URL="mysql://user:password@localhost:3306/cafe_db"
 JWT_SECRET="your-super-secret-key"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Cafe Configuration
+NEXT_PUBLIC_CAFE_NAME="My Café"
+NEXT_PUBLIC_CAFE_SLUG="my-cafe"
+NEXT_PUBLIC_CAFE_TAGLINE="Experience the Art of Fine Coffee"
+NEXT_PUBLIC_CAFE_ADDRESS="123 Coffee Street, Addis Ababa"
+NEXT_PUBLIC_CAFE_PHONE="+251 911 234 567"
+NEXT_PUBLIC_CAFE_EMAIL="info@mycafe.com"
+NEXT_PUBLIC_CAFE_PRIMARY_COLOR="#C9A962"
+NEXT_PUBLIC_CAFE_SECONDARY_COLOR="#3D2914"
+NEXT_PUBLIC_CAFE_LANGUAGE="en"
+NEXT_PUBLIC_CAFE_ABOUT_TITLE="Our Story"
+NEXT_PUBLIC_CAFE_ABOUT_DESCRIPTION="Welcome to our café..."
+
+# Admin Configuration
+ADMIN_EMAIL="admin@cafemenu.com"
+ADMIN_PASSWORD="admin123"
+ADMIN_NAME="Admin"
+
+# App Settings
+NEXT_PUBLIC_CURRENCY="ETB"
 ```
 
 4. Set up the database (MySQL requires creating the database first):
@@ -88,8 +109,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Default Admin Credentials
 
-- **Email**: admin@cafemenu.com
-- **Password**: admin123
+- **Email**: Set via `ADMIN_EMAIL` environment variable (default: admin@cafemenu.com)
+- **Password**: Set via `ADMIN_PASSWORD` environment variable (default: admin123)
 
 ⚠️ Change these credentials in production!
 

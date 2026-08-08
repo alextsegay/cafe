@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme'
 import { useI18n } from '@/lib/i18n'
 import { Modal, Badge } from '@/components/ui'
 import { formatPrice } from '@/lib/utils'
+import config from '@/lib/config'
 import type { MenuItem, Category } from '@/types'
 
 interface MenuClientProps {
@@ -59,7 +60,7 @@ export function MenuClient({ cafeName, categories, menuItems, dailySpecial }: Me
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
-                <span className="text-white font-bold">P</span>
+                <span className="text-white font-bold">{cafeName?.charAt(0) || config.cafe.name.charAt(0)}</span>
               </div>
               <span className="font-display text-xl font-semibold">{cafeName}</span>
             </div>
@@ -245,7 +246,7 @@ export function MenuClient({ cafeName, categories, menuItems, dailySpecial }: Me
               >
                 <div className="relative aspect-[4/3]">
                   <Image
-                    src={item.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80'}
+                    src={item.image || config.images.menuItem}
                     alt={item.name}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -295,7 +296,7 @@ export function MenuClient({ cafeName, categories, menuItems, dailySpecial }: Me
           <div className="space-y-6">
             <div className="relative aspect-video rounded-xl overflow-hidden">
               <Image
-                src={selectedItem.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80'}
+                src={selectedItem.image || config.images.menuItem}
                 alt={selectedItem.name}
                 fill
                 className="object-cover"
@@ -358,7 +359,7 @@ export function MenuClient({ cafeName, categories, menuItems, dailySpecial }: Me
           <div className="space-y-6">
             <div className="relative aspect-video rounded-xl overflow-hidden">
               <Image
-                src={dailySpecial.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80'}
+                src={dailySpecial.image || config.images.menuItem}
                 alt={dailySpecial.name}
                 fill
                 className="object-cover"

@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import Image from 'next/image'
 import { motion, useInView } from 'framer-motion'
 import { useI18n } from '@/lib/i18n'
+import config from '@/lib/config'
 
 interface AboutProps {
   image?: string
@@ -12,7 +13,7 @@ interface AboutProps {
 }
 
 export function About({
-  image = 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80',
+  image = config.images.about,
   title,
   description,
 }: AboutProps) {

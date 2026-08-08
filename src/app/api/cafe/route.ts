@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import config from '@/lib/config'
 
 export async function GET() {
   try {
@@ -25,7 +26,7 @@ export async function PUT(request: Request) {
     const data = await request.json()
 
     const cafe = await prisma.cafe.upsert({
-      where: { slug: data.slug || 'premium-cafe' },
+      where: { slug: data.slug || config.cafe.slug },
       update: {
         name: data.name,
         logo: data.logo,
@@ -47,17 +48,17 @@ export async function PUT(request: Request) {
         aboutImage: data.aboutImage,
       },
       create: {
-        name: data.name || 'Premium Café',
-        slug: 'premium-cafe',
+        name: data.name || config.cafe.name,
+        slug: config.cafe.slug,
         logo: data.logo,
         heroImage: data.heroImage,
         tagline: data.tagline,
         address: data.address,
         phone: data.phone,
         email: data.email,
-        primaryColor: data.primaryColor || '#C9A962',
-        secondaryColor: data.secondaryColor || '#3D2914',
-        language: data.language || 'en',
+        primaryColor: data.primaryColor || config.cafe.primaryColor,
+        secondaryColor: data.secondaryColor || config.cafe.secondaryColor,
+        language: data.language || config.cafe.language,
         openingHours: data.openingHours,
         socialLinks: data.socialLinks,
         dailySpecial: data.dailySpecial,

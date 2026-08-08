@@ -6,6 +6,7 @@ import { Menu, X, Moon, Sun, Globe } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
 import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
+import config from '@/lib/config'
 
 interface NavbarProps {
   transparent?: boolean
@@ -13,7 +14,8 @@ interface NavbarProps {
   cafeName?: string
 }
 
-export function Navbar({ transparent = false, logo, cafeName = 'Premium Café' }: NavbarProps) {
+export function Navbar({ transparent = false, logo, cafeName }: NavbarProps) {
+  const displayCafeName = cafeName || config.cafe.name
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { theme, toggleTheme } = useTheme()
@@ -43,14 +45,14 @@ export function Navbar({ transparent = false, logo, cafeName = 'Premium Café' }
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             {logo ? (
-              <img src={logo} alt={cafeName} className="h-10 w-10 object-contain" />
+              <img src={logo} alt={displayCafeName} className="h-10 w-10 object-contain" />
             ) : (
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
                 <span className="text-white font-bold text-lg">P</span>
               </div>
             )}
             <span className="font-display text-xl font-semibold group-hover:text-amber-600 transition-colors">
-              {cafeName}
+              {displayCafeName}
             </span>
           </Link>
 

@@ -23,7 +23,7 @@ const translations: Translations = {
   'hero.explore': { en: 'Explore', am: 'ያስሱ' },
   'about.title': { en: 'Our Story', am: 'ታሪኳችን' },
   'about.subtitle': { en: 'Crafted with Passion', am: 'ፍቅር የተሞላ' },
-  'about.description': { en: 'Welcome to Premium Café, where every cup tells a story. We source the finest beans from around the world and craft each beverage with dedication and love. Our passion for coffee goes beyond the ordinary — we believe in creating moments of joy, one cup at a time.', am: 'ወደ ፕሪሚየም ካፌ እንኳን በሰላም መጡ። እያንዳንዱ ሽታ ታሪክ ይናገራል። ከዓለም ዙሪያ የተሻለ ቡና ማግኘት እንችላለን እና እያንዳንዱ መጠጥ በቁርኝት እና በፍቅር እንሠራለን። የቡና ፍቅራችን ከመደበኛው በላይ ነው — በአንድ ሽታ ላይ የሐሴት ጊዜዎችን መፍጠር እናምናለን።' },
+  'about.description': { en: 'Welcome to our café, where every cup tells a story. We source the finest beans from around the world and craft each beverage with dedication and love. Our passion for coffee goes beyond the ordinary — we believe in creating moments of joy, one cup at a time.', am: 'ወደ ካፍታችን እንኳን በሰላም መጡ። እያንዳንዱ ሽታ ታሪክ ይናገራል። ከዓለም ዙሪያ የተሻለ ቡና ማግኘት እንችላለን እና እያንዳንዱ መጠጥ በቁርኝት እና በፍቅር እንሠራለን። የቡና ፍቅራችን ከመደበኛው በላይ ነው — በአንድ ሽታ ላይ የሐሴት ጊዜዎችን መፍጠር እናምናለን።' },
   'about.quote': { en: 'Coffee is a lot more than just a drink; it\'s something happening.', am: 'ቡና ከማጠጥ በላይ ብዙ ነገር ነው፤ ነገር እየተከሰተ ነው።' },
   'about.quoteAuthor': { en: '— Jim Norman', am: '— ጂም ኖርማን' },
   'menu.search': { en: 'Search menu...', am: 'ምህዋስ ይፈልጉ...' },
@@ -49,7 +49,9 @@ const translations: Translations = {
   'admin.gallery': { en: 'Gallery', am: 'ስዕላት' },
   'admin.settings': { en: 'Settings', am: 'ቅንብሮች' },
   'admin.qrCode': { en: 'QR Code', am: 'ኪዩ አር ኮድ' },
-  'admin.logout': { en: 'Logout', am: ' ' },
+  'admin.messages': { en: 'Messages', am: 'መልዕክቶች' },
+  'admin.viewWebsite': { en: 'View Website', am: 'ድርጅት ይመልከቱ' },
+  'admin.logout': { en: 'Logout', am: 'ይደርስ' },
   'admin.totalItems': { en: 'Total Items', am: 'ጠቅላላ ነገሮች' },
   'admin.totalCategories': { en: 'Categories', am: 'ምድቦች' },
   'admin.hiddenItems': { en: 'Hidden Items', am: 'የተደበቁ ነገሮች' },
@@ -84,7 +86,7 @@ const translations: Translations = {
   'testimonials.title': { en: 'What Our Guests Say', am: 'የእንግዶቻችን ምን ይላሉ' },
   'testimonials.subtitle': { en: 'Real stories from real coffee lovers', am: 'እውነተኛ ታሪኮች ከእውነተኛ ቡና ፍቋሮች' },
   'gallery.title': { en: 'Our Space', am: 'ቦታችን' },
-  'gallery.subtitle': { en: 'A glimpse into the ambiance that makes Premium Café special', am: 'የፕሪሚየም ካፌን ልዩ የሚያደርገውን ሁኔታ የሚያሳይ እይታ' },
+  'gallery.subtitle': { en: 'A glimpse into the ambiance that makes our café special', am: 'የካፍታችንን ልዩ የሚያደርገውን ሁኔታ የሚያሳይ እይታ' },
 }
 
 interface I18nContextType {

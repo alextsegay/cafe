@@ -10,7 +10,7 @@ datasource db {
 
 model Cafe {
   id            String   @id @default(cuid())
-  name          String   @default("Premium Café")
+  name          String   @default("Café")
   slug          String   @unique
   logo          String?
   heroImage     String?

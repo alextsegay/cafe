@@ -8,6 +8,7 @@ import { motion, useInView } from 'framer-motion'
 import { Badge } from '@/components/ui'
 import { useI18n } from '@/lib/i18n'
 import { formatPrice } from '@/lib/utils'
+import config from '@/lib/config'
 import type { MenuItem } from '@/types'
 
 interface FeaturedMenuProps {
@@ -58,12 +59,12 @@ export function FeaturedMenu({
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: i * 0.1 }}
             >
-              <Link href={`/menu/premium-cafe?item=${item.id}`}>
+              <Link href={`/menu/${config.cafe.slug}?item=${item.id}`}>
                 <article className="group h-full glass rounded-3xl overflow-hidden card-hover">
                   {/* Image */}
                   <div className="relative aspect-[4/3] overflow-hidden">
                     <Image
-                      src={item.image || 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80'}
+                      src={item.image || config.images.menuItem}
                       alt={item.name}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -110,7 +111,7 @@ export function FeaturedMenu({
           transition={{ duration: 0.5, delay: 0.6 }}
           className="text-center mt-12"
         >
-          <Link href="/menu/premium-cafe" className="btn-primary inline-flex items-center gap-2">
+          <Link href={`/menu/${config.cafe.slug}`} className="btn-primary inline-flex items-center gap-2">
             {t('menu.viewFullMenu')}
             <ArrowRight className="w-4 h-4" />
           </Link>

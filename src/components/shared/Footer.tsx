@@ -5,6 +5,7 @@ import { Instagram, Facebook, Twitter, MapPin, Phone, Mail, Clock } from 'lucide
 import { useTheme } from '@/hooks/useTheme'
 import { useI18n } from '@/lib/i18n'
 import { formatTime } from '@/lib/utils'
+import config from '@/lib/config'
 
 interface FooterProps {
   cafeName?: string
@@ -28,13 +29,14 @@ interface FooterProps {
 }
 
 export function Footer({
-  cafeName = 'Premium Café',
+  cafeName,
   address,
   phone,
   email,
   openingHours,
   socialLinks,
 }: FooterProps) {
+  const displayCafeName = cafeName || config.cafe.name
   const { theme } = useTheme()
   const { t } = useI18n()
 
@@ -47,7 +49,7 @@ export function Footer({
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
                 <span className="text-white font-bold text-xl">P</span>
               </div>
-              <span className="font-display text-xl sm:text-2xl font-semibold">{cafeName}</span>
+              <span className="font-display text-xl sm:text-2xl font-semibold">{displayCafeName}</span>
             </div>
             <p className="text-sm text-muted-foreground">
               {t('hero.tagline')}
@@ -97,7 +99,7 @@ export function Footer({
                 </Link>
               </li>
               <li>
-                <Link href="/menu/premium-cafe" className="text-sm text-muted-foreground hover:text-amber-600 transition-colors">
+                <Link href={`/menu/${config.cafe.slug}`} className="text-sm text-muted-foreground hover:text-amber-600 transition-colors">
                   {t('hero.cta')}
                 </Link>
               </li>
@@ -163,7 +165,7 @@ export function Footer({
         <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} {cafeName}. {t('footer.rights')}.
+              © {new Date().getFullYear()} {displayCafeName}. {t('footer.rights')}.
             </p>
             <p className="text-sm text-muted-foreground">
               {t('footer.tagline')}

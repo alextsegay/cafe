@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import config from '@/lib/config'
 
 export async function GET() {
   try {
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
       await prisma.notification.create({
         data: {
           type: 'info',
-          title: 'New Contact Message',
+          title: config.cafe.name ? `New Contact Message for ${config.cafe.name}` : 'New Contact Message',
           message: `${name} sent a message: ${subject || 'No subject'}`,
         },
       })

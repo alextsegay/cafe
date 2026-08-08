@@ -20,35 +20,8 @@ interface TestimonialsProps {
   subtitle?: string
 }
 
-const defaultTestimonials: Testimonial[] = [
-  {
-    id: '1',
-    name: 'Sarah Johnson',
-    role: 'Coffee Enthusiast',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80',
-    rating: 5,
-    text: 'The best coffee I have ever had! The atmosphere is incredible and the staff is so friendly. Definitely my go-to spot for working remotely.',
-  },
-  {
-    id: '2',
-    name: 'Michael Chen',
-    role: 'Food Blogger',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80',
-    rating: 5,
-    text: 'Their pastries are absolutely divine. I especially love the avocado toast and the croissants. The attention to detail is remarkable.',
-  },
-  {
-    id: '3',
-    name: 'Emily Davis',
-    role: 'Regular Customer',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80',
-    rating: 5,
-    text: 'A hidden gem! The ambiance is perfect for both dates and catching up with friends. Their seasonal menu is always a pleasant surprise.',
-  },
-]
-
 export function Testimonials({
-  testimonials = defaultTestimonials,
+  testimonials = [],
   title,
   subtitle
 }: TestimonialsProps) {

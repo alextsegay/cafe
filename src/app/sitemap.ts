@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
+import config from '@/lib/config'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = config.app.url
 
   try {
     const cafes = await prisma.cafe.findMany({
@@ -36,7 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 1,
       },
       {
-        url: `${baseUrl}/menu/premium-cafe`,
+        url: `${baseUrl}/menu/${config.cafe.slug}`,
         lastModified: new Date(),
         changeFrequency: 'daily',
         priority: 0.9,

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Save, Loader2, Image as ImageIcon } from 'lucide-react'
 import { Button, Input, Select } from '@/components/ui'
+import config from '@/lib/config'
+import { useI18n } from '@/lib/i18n'
 
 interface CafeSettings {
   id?: string
@@ -41,27 +43,28 @@ interface CafeSettings {
 }
 
 export default function SettingsPage() {
+  const { t } = useI18n()
   const [settings, setSettings] = useState<CafeSettings>({
     name: '',
-    slug: 'premium-cafe',
+    slug: config.cafe.slug,
     logo: '',
     heroImage: '',
-    tagline: 'Experience the Art of Fine Coffee',
+    tagline: config.cafe.tagline,
     address: '',
     phone: '',
     email: '',
-    primaryColor: '#C9A962',
-    secondaryColor: '#3D2914',
+    primaryColor: config.cafe.primaryColor,
+    secondaryColor: config.cafe.secondaryColor,
     language: 'en',
     openingHours: {
-      weekdays: { open: '07:00', close: '22:00' },
-      saturday: { open: '08:00', close: '23:00' },
-      sunday: { open: '08:00', close: '21:00' },
+      weekdays: { open: config.openingHours.monday.open, close: config.openingHours.monday.close },
+      saturday: { open: config.openingHours.saturday.open, close: config.openingHours.saturday.close },
+      sunday: { open: config.openingHours.sunday.open, close: config.openingHours.sunday.close },
     },
     socialLinks: {
-      instagram: '',
-      facebook: '',
-      twitter: '',
+      instagram: config.socialLinks.instagram,
+      facebook: config.socialLinks.facebook,
+      twitter: config.socialLinks.twitter,
     },
     dailySpecial: {
       name: '',
@@ -70,8 +73,8 @@ export default function SettingsPage() {
       image: '',
     },
     mapEmbed: '',
-    aboutTitle: 'Our Story',
-    aboutDescription: 'Welcome to Premium Café, where every cup tells a story. We source the finest beans from around the world and craft each beverage with dedication and love.',
+    aboutTitle: t('about.title'),
+    aboutDescription: t('about.description'),
     aboutImage: '',
   })
   const [isLoading, setIsLoading] = useState(true)
@@ -100,16 +103,16 @@ export default function SettingsPage() {
           const dbOpeningHours = data.openingHours as any
           const openingHours = dbOpeningHours?.monday ? {
             weekdays: {
-              open: dbOpeningHours.monday?.open || '07:00',
-              close: dbOpeningHours.monday?.close || '22:00',
+              open: dbOpeningHours.monday?.open || config.openingHours.monday.open,
+              close: dbOpeningHours.monday?.close || config.openingHours.monday.close,
             },
             saturday: {
-              open: dbOpeningHours.saturday?.open || '08:00',
-              close: dbOpeningHours.saturday?.close || '23:00',
+              open: dbOpeningHours.saturday?.open || config.openingHours.saturday.open,
+              close: dbOpeningHours.saturday?.close || config.openingHours.saturday.close,
             },
             sunday: {
-              open: dbOpeningHours.sunday?.open || '08:00',
-              close: dbOpeningHours.sunday?.close || '21:00',
+              open: dbOpeningHours.sunday?.open || config.openingHours.sunday.open,
+              close: dbOpeningHours.sunday?.close || config.openingHours.sunday.close,
             },
           } : data.openingHours
 
@@ -147,8 +150,8 @@ export default function SettingsPage() {
       const res = await fetch('/api/notifications')
       if (res.ok) {
         const notifications = await res.json()
-        const hasExpiredNotification = notifications.some(
-          (n: any) => n.type === 'warning' && n.title === 'Daily Special Expired'
+          const hasExpiredNotification = notifications.some(
+          (n: any) => n.type === 'warning' && n.title === t('admin.dailySpecialExpired')
         )
         if (!hasExpiredNotification) {
           await fetch('/api/notifications', {
@@ -156,8 +159,8 @@ export default function SettingsPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               type: 'warning',
-              title: 'Daily Special Expired',
-              message: 'Your daily special has expired. Please update it to keep your menu fresh.',
+              title: t('admin.dailySpecialExpired'),
+              message: t('admin.dailySpecialExpiredMsg'),
             }),
           })
         }
@@ -185,15 +188,15 @@ export default function SettingsPage() {
       })
 
       if (res.ok) {
-        setMessage('Settings saved successfully!')
+        setMessage(t('admin.settingsSaved'))
         setTimeout(() => setMessage(''), 3000)
         fetchSettings() // Refresh to get updated timestamp
       } else {
         const errorData = await res.json().catch(() => ({}))
-        setMessage(errorData.error || 'Failed to save settings')
+        setMessage(errorData.error || t('admin.saveFailed'))
       }
     } catch (error) {
-      setMessage('An error occurred while saving')
+      setMessage(t('admin.saveError'))
     } finally {
       setIsSaving(false)
     }
@@ -236,8 +239,8 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">Customize your café's branding and information</p>
+          <h1 className="font-display text-3xl font-bold">{t('admin.settings')}</h1>
+          <p className="text-muted-foreground mt-1">{t('admin.settingsSubtitle')}</p>
         </div>
         {message && (
           <div className={`px-4 py-2 rounded-xl text-sm ${
@@ -253,16 +256,16 @@ export default function SettingsPage() {
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Info */}
         <div className="glass rounded-2xl p-6 space-y-6">
-          <h2 className="font-semibold text-lg">Basic Information</h2>
+          <h2 className="font-semibold text-lg">{t('admin.basicInfo')}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Café Name"
+              label={t('admin.cafeName')}
               value={settings.name}
               onChange={(e) => setSettings({ ...settings, name: e.target.value })}
             />
             <Input
-              label="URL Slug"
+              label={t('admin.urlSlug')}
               value={settings.slug}
               onChange={(e) => setSettings({ ...settings, slug: e.target.value })}
               disabled
@@ -272,7 +275,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Logo Upload */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium">Café Logo</label>
+              <label className="block text-sm font-medium">{t('admin.cafeLogo')}</label>
               <input
                 type="file"
                 accept="image/*"
@@ -292,7 +295,7 @@ export default function SettingsPage() {
                     const data = await res.json()
                     setSettings({ ...settings, logo: data.url })
                   } else {
-                    alert('Failed to upload logo image')
+                    alert(t('admin.uploadLogoFailed'))
                   }
                 }}
                 className="w-full px-4 py-3 rounded-xl border bg-white/50 dark:bg-black/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -306,7 +309,7 @@ export default function SettingsPage() {
 
             {/* Hero Image Upload */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium">Hero Image</label>
+              <label className="block text-sm font-medium">{t('admin.heroImage')}</label>
               <input
                 type="file"
                 accept="image/*"
@@ -326,7 +329,7 @@ export default function SettingsPage() {
                     const data = await res.json()
                     setSettings({ ...settings, heroImage: data.url })
                   } else {
-                    alert('Failed to upload hero image')
+                    alert(t('admin.uploadHeroFailed'))
                   }
                 }}
                 className="w-full px-4 py-3 rounded-xl border bg-white/50 dark:bg-black/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
@@ -340,32 +343,32 @@ export default function SettingsPage() {
           </div>
 
           <Input
-            label="Tagline"
+            label={t('admin.tagline')}
             value={settings.tagline}
             onChange={(e) => setSettings({ ...settings, tagline: e.target.value })}
-            placeholder="Experience the Art of Fine Coffee"
+            placeholder={t('hero.tagline')}
           />
         </div>
 
         {/* Contact Info */}
         <div className="glass rounded-2xl p-6 space-y-6">
-          <h2 className="font-semibold text-lg">Contact Information</h2>
+          <h2 className="font-semibold text-lg">{t('admin.contactInfo')}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Address"
+              label={t('admin.address')}
               value={settings.address}
               onChange={(e) => setSettings({ ...settings, address: e.target.value })}
             />
             <Input
-              label="Phone"
+              label={t('admin.phone')}
               value={settings.phone}
               onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
             />
           </div>
 
           <Input
-            label="Email"
+            label={t('admin.email')}
             type="email"
             value={settings.email}
             onChange={(e) => setSettings({ ...settings, email: e.target.value })}
@@ -374,11 +377,11 @@ export default function SettingsPage() {
 
         {/* Branding Colors */}
         <div className="glass rounded-2xl p-6 space-y-6">
-          <h2 className="font-semibold text-lg">Branding Colors</h2>
+          <h2 className="font-semibold text-lg">{t('admin.brandingColors')}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium">Primary Color</label>
+              <label className="block text-sm font-medium">{t('admin.primaryColor')}</label>
               <div className="flex gap-3">
                 <input
                   type="color"
@@ -394,7 +397,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium">Secondary Color</label>
+              <label className="block text-sm font-medium">{t('admin.secondaryColor')}</label>
               <div className="flex gap-3">
                 <input
                   type="color"
@@ -414,11 +417,11 @@ export default function SettingsPage() {
 
         {/* Social Links */}
         <div className="glass rounded-2xl p-6 space-y-6">
-          <h2 className="font-semibold text-lg">Social Media Links</h2>
+          <h2 className="font-semibold text-lg">{t('admin.socialLinks')}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
-              label="Instagram"
+              label={t('admin.instagram')}
               value={settings.socialLinks.instagram}
               onChange={(e) => setSettings({
                 ...settings,
@@ -427,7 +430,7 @@ export default function SettingsPage() {
               placeholder="https://instagram.com/..."
             />
             <Input
-              label="Facebook"
+              label={t('admin.facebook')}
               value={settings.socialLinks.facebook}
               onChange={(e) => setSettings({
                 ...settings,
@@ -436,7 +439,7 @@ export default function SettingsPage() {
               placeholder="https://facebook.com/..."
             />
             <Input
-              label="Twitter"
+              label={t('admin.twitter')}
               value={settings.socialLinks.twitter}
               onChange={(e) => setSettings({
                 ...settings,
@@ -449,18 +452,18 @@ export default function SettingsPage() {
 
         {/* Opening Hours */}
         <div className="glass rounded-2xl p-6 space-y-6">
-          <h2 className="font-semibold text-lg">Opening Hours</h2>
+          <h2 className="font-semibold text-lg">{t('admin.openingHours')}</h2>
 
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <span className="w-24 text-sm font-medium shrink-0">Mon - Fri</span>
+              <span className="w-24 text-sm font-medium shrink-0">{t('admin.weekdays')}</span>
               <Input
                 type="time"
                 value={settings.openingHours.weekdays.open}
                 onChange={(e) => updateOpeningHours('weekdays', 'open', e.target.value)}
                 className="flex-1 min-w-0"
               />
-              <span className="text-muted-foreground text-sm shrink-0">to</span>
+              <span className="text-muted-foreground text-sm shrink-0">{t('admin.to')}</span>
               <Input
                 type="time"
                 value={settings.openingHours.weekdays.close}
@@ -469,14 +472,14 @@ export default function SettingsPage() {
               />
             </div>
             <div className="flex items-center gap-3">
-              <span className="w-24 text-sm font-medium shrink-0">Saturday</span>
+              <span className="w-24 text-sm font-medium shrink-0">{t('admin.saturday')}</span>
               <Input
                 type="time"
                 value={settings.openingHours.saturday.open}
                 onChange={(e) => updateOpeningHours('saturday', 'open', e.target.value)}
                 className="flex-1 min-w-0"
               />
-              <span className="text-muted-foreground text-sm shrink-0">to</span>
+              <span className="text-muted-foreground text-sm shrink-0">{t('admin.to')}</span>
               <Input
                 type="time"
                 value={settings.openingHours.saturday.close}
@@ -485,14 +488,14 @@ export default function SettingsPage() {
               />
             </div>
             <div className="flex items-center gap-3">
-              <span className="w-24 text-sm font-medium shrink-0">Sunday</span>
+              <span className="w-24 text-sm font-medium shrink-0">{t('admin.sunday')}</span>
               <Input
                 type="time"
                 value={settings.openingHours.sunday.open}
                 onChange={(e) => updateOpeningHours('sunday', 'open', e.target.value)}
                 className="flex-1 min-w-0"
               />
-              <span className="text-muted-foreground text-sm shrink-0">to</span>
+              <span className="text-muted-foreground text-sm shrink-0">{t('admin.to')}</span>
               <Input
                 type="time"
                 value={settings.openingHours.sunday.close}
@@ -505,7 +508,7 @@ export default function SettingsPage() {
 
         {/* Map Embed */}
         <div className="glass rounded-2xl p-6 space-y-6">
-          <h2 className="font-semibold text-lg">Map Embed</h2>
+          <h2 className="font-semibold text-lg">{t('admin.mapEmbed')}</h2>
           <p className="text-sm text-muted-foreground">
             Paste your Google Maps or other map embed code below. This will be displayed on the contact page.
           </p>
@@ -521,7 +524,7 @@ export default function SettingsPage() {
         {/* Daily Special */}
         <div className="glass rounded-2xl p-6 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">Daily Special Banner</h2>
+            <h2 className="font-semibold text-lg">{t('admin.dailySpecial')}</h2>
             {cafeData?.dailySpecialUpdatedAt && (
               <div className={`text-sm px-3 py-1 rounded-full ${
                 isSpecialExpired(cafeData.dailySpecialUpdatedAt)
@@ -612,7 +615,7 @@ export default function SettingsPage() {
 
         {/* About Section */}
         <div className="glass rounded-2xl p-6 space-y-6">
-          <h2 className="font-semibold text-lg">About Section</h2>
+          <h2 className="font-semibold text-lg">{t('admin.aboutSection')}</h2>
 
           <Input
             label="About Title"

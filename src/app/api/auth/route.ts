@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword, verifyPassword, generateToken, setAuthCookie } from '@/lib/auth'
 import { checkRateLimit, getClientIdentifier } from '@/middleware/redis-rate-limit'
 import { validateCsrfToken, getCsrfToken } from '@/middleware/csrf'
+import config from '@/lib/config'
 
 export async function POST(request: Request) {
   try {
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
         data: {
           email,
           password: hashedPassword,
-          name: 'Admin',
+          name: config.admin.name,
           role: 'admin',
         },
       })

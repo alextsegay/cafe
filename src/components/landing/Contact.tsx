@@ -6,6 +6,7 @@ import { motion, useInView } from 'framer-motion'
 import { Button, Input } from '@/components/ui'
 import { useI18n } from '@/lib/i18n'
 import { formatTime } from '@/lib/utils'
+import config from '@/lib/config'
 
 // Simple HTML sanitizer to prevent XSS
 function sanitizeHtml(html: string): string {
@@ -35,18 +36,10 @@ interface ContactProps {
 }
 
 export function Contact({
-  address = '123 Coffee Street, Downtown',
-  phone = '+1 234 567 890',
-  email = 'hello@premiumcafe.com',
-  openingHours = {
-    monday: { open: '07:00', close: '22:00' },
-    tuesday: { open: '07:00', close: '22:00' },
-    wednesday: { open: '07:00', close: '22:00' },
-    thursday: { open: '07:00', close: '22:00' },
-    friday: { open: '07:00', close: '23:00' },
-    saturday: { open: '08:00', close: '23:00' },
-    sunday: { open: '08:00', close: '21:00' },
-  },
+  address = config.cafe.address,
+  phone = config.cafe.phone,
+  email = config.cafe.email,
+  openingHours = config.openingHours,
   mapEmbed,
 }: ContactProps) {
   const ref = useRef(null)
@@ -268,7 +261,7 @@ export function Contact({
                 )}
 
                 <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`}
+                  href={`${config.maps.directionsUrl}${encodeURIComponent(address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 w-full px-6 py-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium transition-colors"
@@ -287,7 +280,7 @@ export function Contact({
                   />
                 ) : (
                   <iframe
-                    src={`https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`}
+                    src={`${config.maps.embedUrl}${encodeURIComponent(address)}&output=embed`}
                     title="Cafe Location"
                     className="w-full h-full border-0"
                     allowFullScreen

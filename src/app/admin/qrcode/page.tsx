@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { Download, Printer, QrCode, Loader2, Copy, Check } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
+import config from '@/lib/config'
 import QRCodeLib from 'qrcode'
 
 export default function QRCodePage() {
   const [menuUrl, setMenuUrl] = useState('')
   const [qrCodeUrl, setQrCodeUrl] = useState('')
-  const [cafeSlug, setCafeSlug] = useState('premium-cafe')
+  const [cafeSlug, setCafeSlug] = useState(config.cafe.slug)
   const [isLoading, setIsLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [qrSize, setQrSize] = useState(400)
@@ -30,12 +31,12 @@ export default function QRCodePage() {
         const data = await res.json()
         if (data) {
           setCafeSlug(data.slug)
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+          const baseUrl = config.app.url
           setMenuUrl(`${baseUrl}/menu/${data.slug}`)
         }
       }
     } catch (error) {
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+      const baseUrl = config.app.url
       setMenuUrl(`${baseUrl}/menu/${cafeSlug}`)
     } finally {
       setIsLoading(false)

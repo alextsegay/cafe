@@ -1,10 +1,11 @@
 import { type ClassValue, clsx } from 'clsx'
+import config from '@/lib/config'
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs)
 }
 
-export function formatPrice(price: number, currency: string = 'ETB'): string {
+export function formatPrice(price: number, currency: string = config.app.currency): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
@@ -34,8 +35,7 @@ export function truncate(text: string, length: number): string {
 }
 
 export function getMenuUrl(slug: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  return `${baseUrl}/menu/${slug}`
+  return `${config.app.url}/menu/${slug}`
 }
 
 export function formatTime(time: string): string {

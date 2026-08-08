@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 import cloudinary from '@/lib/cloudinary'
+import config from '@/lib/config'
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     const dataURI = `data:${file.type};base64,${base64}`
 
     const result = await cloudinary.uploader.upload(dataURI, {
-      folder: 'cafe-uploads',
+      folder: process.env.CLOUDINARY_UPLOAD_FOLDER || config.cafe.slug,
       transformation: [{ width: 1200, crop: 'limit', quality: 'auto' }],
     })
 
