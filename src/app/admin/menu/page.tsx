@@ -132,7 +132,11 @@ export default function MenuPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, image: imageUrl }),
+        body: JSON.stringify({
+          ...formData,
+          price: parseFloat(formData.price),
+          image: imageUrl,
+        }),
       })
 
       if (res.ok) {
@@ -140,7 +144,12 @@ export default function MenuPage() {
         setShowModal(false)
       } else {
         const data = await res.json()
-        alert(data.error || 'Failed to save')
+        const errorMsg = typeof data.error === 'string'
+          ? data.error
+          : Array.isArray(data.error)
+          ? data.error.map((err: any) => `${err.path.join('.')}: ${err.message}`).join('\n')
+          : 'Failed to save'
+        alert(errorMsg)
       }
     } catch (error) {
       alert('An error occurred')
