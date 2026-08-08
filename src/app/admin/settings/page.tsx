@@ -189,10 +189,11 @@ export default function SettingsPage() {
         setTimeout(() => setMessage(''), 3000)
         fetchSettings() // Refresh to get updated timestamp
       } else {
-        setMessage('Failed to save settings')
+        const errorData = await res.json().catch(() => ({}))
+        setMessage(errorData.error || 'Failed to save settings')
       }
     } catch (error) {
-      setMessage('An error occurred')
+      setMessage('An error occurred while saving')
     } finally {
       setIsSaving(false)
     }
@@ -268,19 +269,74 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Logo URL"
-              value={settings.logo}
-              onChange={(e) => setSettings({ ...settings, logo: e.target.value })}
-              placeholder="https://..."
-            />
-            <Input
-              label="Hero Image URL"
-              value={settings.heroImage}
-              onChange={(e) => setSettings({ ...settings, heroImage: e.target.value })}
-              placeholder="https://..."
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Café Logo</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+
+                  const uploadFormData = new FormData()
+                  uploadFormData.append('file', file)
+
+                  const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: uploadFormData,
+                  })
+
+                  if (res.ok) {
+                    const data = await res.json()
+                    setSettings({ ...settings, logo: data.url })
+                  } else {
+                    alert('Failed to upload logo image')
+                  }
+                }}
+                className="w-full px-4 py-3 rounded-xl border bg-white/50 dark:bg-black/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              />
+              {settings.logo && (
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden border">
+                  <Image src={settings.logo} alt="Logo preview" fill className="object-cover" />
+                </div>
+              )}
+            </div>
+
+            {/* Hero Image Upload */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Hero Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+
+                  const uploadFormData = new FormData()
+                  uploadFormData.append('file', file)
+
+                  const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: uploadFormData,
+                  })
+
+                  if (res.ok) {
+                    const data = await res.json()
+                    setSettings({ ...settings, heroImage: data.url })
+                  } else {
+                    alert('Failed to upload hero image')
+                  }
+                }}
+                className="w-full px-4 py-3 rounded-xl border bg-white/50 dark:bg-black/20 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              />
+              {settings.heroImage && (
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden border">
+                  <Image src={settings.heroImage} alt="Hero preview" fill className="object-cover" />
+                </div>
+              )}
+            </div>
           </div>
 
           <Input
