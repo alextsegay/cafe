@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
+import config from '@/lib/config'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -71,7 +72,7 @@ export default function AdminLoginPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-              <span className="text-white font-bold text-2xl">P</span>
+              <span className="text-white font-bold text-2xl">{config.cafe.name.charAt(0)}</span>
             </div>
           </Link>
           <h1 className="font-display text-3xl font-bold">Welcome Back</h1>
@@ -112,12 +113,6 @@ export default function AdminLoginPage() {
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Link href="/admin/forgot-password" className="text-sm text-amber-600 hover:text-amber-700 transition-colors">
-                Forgot password?
-              </Link>
             </div>
 
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>

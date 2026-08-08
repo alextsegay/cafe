@@ -82,8 +82,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     )
   }
 
-  // Don't show sidebar on login, forgot password, or reset password pages
-  const isAuthPage = pathname === '/admin' || pathname === '/admin/forgot-password' || pathname === '/admin/reset-password'
+  // Don't show sidebar on login page
+  const isAuthPage = pathname === '/admin'
 
   if (isAuthPage) {
     return <>{children}</>

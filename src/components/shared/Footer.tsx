@@ -52,7 +52,7 @@ export function Footer({
               <span className="font-display text-xl sm:text-2xl font-semibold">{displayCafeName}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              {t('footer.tagline')}
+              {displayCafeName}
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
@@ -168,7 +168,7 @@ export function Footer({
               © {new Date().getFullYear()} {displayCafeName}. {t('footer.rights')}.
             </p>
             <p className="text-sm text-muted-foreground">
-              {t('footer.tagline')}
+              {displayCafeName}
             </p>
           </div>
         </div>

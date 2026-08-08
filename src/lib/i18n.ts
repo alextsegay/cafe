@@ -128,7 +128,6 @@ const translations: Translations = {
   'contact.saturday': { en: 'Saturday', am: 'ቅዳሜ' },
   'contact.sunday': { en: 'Sunday', am: 'እሑድ' },
   'footer.rights': { en: 'All rights reserved.', am: 'ሁሉም መብቶች የተጠበቁ ናቸው።' },
-  'footer.tagline': { en: 'Premium Café', am: 'ፕሪሚየም ካፌ' },
   'testimonials.label': { en: 'Testimonials', am: 'ምስክርነቶች' },
   'testimonials.title': { en: 'What Our Guests Say', am: 'የእንግዶቻችን ምን ይላሉ' },
   'testimonials.subtitle': { en: 'Real stories from real coffee lovers', am: 'እውነተኛ ታሪኮች ከእውነተኛ ቡና ፍቋሮች' },

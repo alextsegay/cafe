@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hashPassword, verifyPassword, generateToken, setAuthCookie } from '@/lib/auth'
+import { hashPassword, verifyPassword, generateToken, setAuthCookie, getCurrentUser } from '@/lib/auth'
 import { checkRateLimit, getClientIdentifier } from '@/middleware/redis-rate-limit'
 import { validateCsrfToken, getCsrfToken } from '@/middleware/csrf'
 import config from '@/lib/config'
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     // Validate CSRF token for state-changing operations
-    if (action === 'login' || action === 'register' || action === 'logout') {
+    if (action === 'login' || action === 'register' || action === 'logout' || action === 'change-password') {
       const csrfResult = validateCsrfToken(request)
       if (!csrfResult.valid) {
         return NextResponse.json({ error: csrfResult.error }, { status: 403 })
@@ -102,6 +102,64 @@ export async function POST(request: Request) {
           name: user.name,
           role: user.role,
         },
+      })
+    }
+
+    if (action === 'change-password') {
+      const user = await getCurrentUser()
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      const { currentPassword, newPassword } = await request.json()
+
+      if (!currentPassword || !newPassword) {
+        return NextResponse.json(
+          { error: 'Current password and new password are required' },
+          { status: 400 }
+        )
+      }
+
+      // Password complexity validation
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+      if (!passwordRegex.test(newPassword)) {
+        return NextResponse.json(
+          { error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)' },
+          { status: 400 }
+        )
+      }
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+      })
+
+      if (!dbUser) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
+      }
+
+      const isValid = await verifyPassword(currentPassword, dbUser.password)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: 'Current password is incorrect' },
+          { status: 400 }
+        )
+      }
+
+      const hashedPassword = await hashPassword(newPassword)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'Password changed successfully',
       })
     }
 

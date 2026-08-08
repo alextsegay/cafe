@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Save, Loader2, Image as ImageIcon } from 'lucide-react'
+import { Save, Loader2, Image as ImageIcon, KeyRound, Eye, EyeOff } from 'lucide-react'
 import { Button, Input, Select } from '@/components/ui'
 import config from '@/lib/config'
 import { useI18n } from '@/lib/i18n'
@@ -81,6 +81,31 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [cafeData, setCafeData] = useState<any>(null)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState('')
+  const [csrfToken, setCsrfToken] = useState('')
+
+  useEffect(() => {
+    // Fetch CSRF token
+    fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-csrf' }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.csrfToken) {
+          setCsrfToken(data.csrfToken)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetchSettings()
@@ -167,6 +192,48 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error creating notification:', error)
+    }
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordMessage('')
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage('New passwords do not match')
+      return
+    }
+
+    setIsChangingPassword(true)
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({
+          action: 'change-password',
+          currentPassword,
+          newPassword,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setPasswordMessage('Password changed successfully!')
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+      } else {
+        setPasswordMessage(data.error || 'Failed to change password')
+      }
+    } catch {
+      setPasswordMessage('An error occurred. Please try again.')
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -669,6 +736,88 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Change Password */}
+        <div className="glass rounded-2xl p-6 space-y-6">
+          <h2 className="font-semibold text-lg flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-amber-500" />
+            Change Password
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Update your admin password. You'll need to use the new password next time you sign in.
+          </p>
+
+          {passwordMessage && (
+            <div className={`p-4 rounded-xl text-sm ${
+              passwordMessage.includes('successfully')
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            }`}>
+              {passwordMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="relative">
+              <Input
+                label="Current Password"
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-[38px] text-muted-foreground hover:text-foreground"
+              >
+                {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+
+            <div className="relative">
+              <Input
+                label="New Password"
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 chars with uppercase, lowercase, number, special char"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-[38px] text-muted-foreground hover:text-foreground"
+              >
+                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+
+            <div className="relative">
+              <Input
+                label="Confirm New Password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-[38px] text-muted-foreground hover:text-foreground"
+              >
+                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+
+            <Button type="submit" isLoading={isChangingPassword} variant="outline">
+              <KeyRound className="w-4 h-4 mr-2" />
+              Change Password
+            </Button>
+          </form>
         </div>
 
         {/* Submit */}
