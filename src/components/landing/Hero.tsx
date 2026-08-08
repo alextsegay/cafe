@@ -80,7 +80,7 @@ export function Hero({ heroImage, cafeName = 'Premium Café', tagline }: HeroPro
             className="flex flex-col sm:flex-row gap-4 justify-center pt-4"
           >
             <Link
-              href="/menu/premium-cafe"
+              href="/menu"
               className="btn-primary text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 animate-glow"
             >
               {t('hero.cta')}

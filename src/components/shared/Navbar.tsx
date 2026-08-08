@@ -89,7 +89,7 @@ export function Navbar({ transparent = false, logo, cafeName = 'Premium Café' }
                 )}
               </button>
               <Link
-                href="/menu/premium-cafe"
+                href="/menu"
                 className="btn-primary text-sm"
               >
                 {t('hero.cta')}
@@ -165,7 +165,7 @@ export function Navbar({ transparent = false, logo, cafeName = 'Premium Café' }
             {language === 'en' ? 'አማርኛ' : 'English'}
           </button>
           <Link
-            href="/menu/premium-cafe"
+            href="/menu"
             className="block w-full text-center btn-primary text-sm"
             onClick={() => setIsOpen(false)}
           >
