@@ -47,12 +47,12 @@ export function Footer({
             <div className="col-span-2 lg:col-span-1 space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
-                <span className="text-white font-bold text-xl">P</span>
+                <span className="text-white font-bold text-xl">{displayCafeName.charAt(0)}</span>
               </div>
               <span className="font-display text-xl sm:text-2xl font-semibold">{displayCafeName}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              {t('hero.tagline')}
+              {t('footer.tagline')}
             </p>
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
@@ -145,15 +145,15 @@ export function Footer({
               </h4>
               <ul className="space-y-2 text-sm">
                 <li className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Mon - Fri</span>
+                  <span className="text-muted-foreground">{t('contact.monFri')}</span>
                   <span>{formatTime(openingHours.monday.open)} - {formatTime(openingHours.monday.close)}</span>
                 </li>
                 <li className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Saturday</span>
+                  <span className="text-muted-foreground">{t('contact.saturday')}</span>
                   <span>{formatTime(openingHours.saturday.open)} - {formatTime(openingHours.saturday.close)}</span>
                 </li>
                 <li className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Sunday</span>
+                  <span className="text-muted-foreground">{t('contact.sunday')}</span>
                   <span>{formatTime(openingHours.sunday.open)} - {formatTime(openingHours.sunday.close)}</span>
                 </li>
               </ul>

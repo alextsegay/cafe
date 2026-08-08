@@ -37,7 +37,11 @@ export default async function AboutPage() {
         logo={cafe?.logo || undefined}
         cafeName={cafe?.name}
       />
-      <About />
+      <About
+        image={cafe?.aboutImage || undefined}
+        title={cafe?.aboutTitle || undefined}
+        description={cafe?.aboutDescription || undefined}
+      />
       <Footer
         cafeName={cafe?.name}
         address={cafe?.address || undefined}

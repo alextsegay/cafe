@@ -10,12 +10,17 @@ interface AboutProps {
   image?: string
   title?: string
   description?: string
+  stats?: {
+    label: string
+    value: string
+  }[]
 }
 
 export function About({
   image = config.images.about,
   title,
   description,
+  stats,
 }: AboutProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-100px' })
@@ -23,10 +28,10 @@ export function About({
   const displayTitle = title || t('about.title')
   const displayDescription = description || t('about.description')
 
-  const features = [
-    { label: 'Since', value: '2018' },
-    { label: 'Beans', value: '12+' },
-    { label: 'Happy Customers', value: '50K+' },
+  const features = stats && stats.length > 0 ? stats : [
+    { label: t('about.since'), value: '2018' },
+    { label: t('about.beans'), value: '12+' },
+    { label: t('about.customers'), value: '50K+' },
   ]
 
   return (

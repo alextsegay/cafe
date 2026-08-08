@@ -229,7 +229,7 @@ export function MenuClient({ cafeName, categories, menuItems, dailySpecial }: Me
               <Coffee className="w-16 h-16 mx-auto" />
             </div>
             <h3 className="text-xl font-semibold">{t('menu.noItems')}</h3>
-            <p className="text-muted-foreground mt-2">Try adjusting your search or filters</p>
+            <p className="text-muted-foreground mt-2">{t('menu.noItemsHint')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

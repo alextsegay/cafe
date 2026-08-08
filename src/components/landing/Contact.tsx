@@ -27,8 +27,12 @@ function sanitizeHtml(html: string): string {
             .replace(/\s*on\w+\s*=\s*[^\s>]+/gi, '')
             .replace(/\s*style\s*=\s*["'][^"']*["']/gi, '')
             .replace(/\s*style\s*=\s*[^\s>]+/gi, '')
+            .replace(/\s*width\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\s*width\s*=\s*[^\s>]+/gi, '')
+            .replace(/\s*height\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\s*height\s*=\s*[^\s>]+/gi, '')
           const placeholder = `__IFRAME_${iframes.length}__`
-          iframes.push(`<iframe${safeAttrs}></iframe>`)
+          iframes.push(`<iframe${safeAttrs} style="width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>`)
           return placeholder
         }
       } catch {
@@ -290,9 +294,9 @@ export function Contact({
                     <div>
                       <h4 className="font-semibold">{t('contact.hours')}</h4>
                       <div className="text-muted-foreground space-y-1 mt-1">
-                        <p>Mon - Fri: {formatTime(openingHours.monday.open)} - {formatTime(openingHours.monday.close)}</p>
-                        <p>Saturday: {formatTime(openingHours.saturday.open)} - {formatTime(openingHours.saturday.close)}</p>
-                        <p>Sunday: {formatTime(openingHours.sunday.open)} - {formatTime(openingHours.sunday.close)}</p>
+                        <p>{t('contact.monFri')}: {formatTime(openingHours.monday.open)} - {formatTime(openingHours.monday.close)}</p>
+                        <p>{t('contact.saturday')}: {formatTime(openingHours.saturday.open)} - {formatTime(openingHours.saturday.close)}</p>
+                        <p>{t('contact.sunday')}: {formatTime(openingHours.sunday.open)} - {formatTime(openingHours.sunday.close)}</p>
                       </div>
                     </div>
                   </div>

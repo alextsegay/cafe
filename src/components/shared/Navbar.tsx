@@ -48,7 +48,7 @@ export function Navbar({ transparent = false, logo, cafeName }: NavbarProps) {
               <img src={logo} alt={displayCafeName} className="h-10 w-10 object-contain" />
             ) : (
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">P</span>
+                <span className="text-white font-bold text-lg">{displayCafeName.charAt(0)}</span>
               </div>
             )}
             <span className="font-display text-xl font-semibold group-hover:text-amber-600 transition-colors">
