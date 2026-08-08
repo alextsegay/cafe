@@ -10,13 +10,51 @@ import config from '@/lib/config'
 
 // Simple HTML sanitizer to prevent XSS
 function sanitizeHtml(html: string): string {
-  return html
+  // Allow safe iframe embeds from trusted domains (e.g. Google Maps)
+  const allowedIframeDomains = ['google.com', 'maps.google.com', 'www.google.com', 'maps.google.co']
+
+  // Extract and preserve safe iframes
+  const iframes: string[] = []
+  let sanitized = html.replace(/<iframe\b([^>]*)><\/iframe>/gi, (match, attrs) => {
+    const srcMatch = attrs.match(/src=["']([^"']+)["']/)
+    if (srcMatch) {
+      try {
+        const url = new URL(srcMatch[1])
+        if (allowedIframeDomains.some(domain => url.hostname === domain || url.hostname.endsWith('.' + domain))) {
+          // Strip dangerous attributes but keep safe ones
+          const safeAttrs = attrs
+            .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\s*on\w+\s*=\s*[^\s>]+/gi, '')
+            .replace(/\s*style\s*=\s*["'][^"']*["']/gi, '')
+            .replace(/\s*style\s*=\s*[^\s>]+/gi, '')
+          const placeholder = `__IFRAME_${iframes.length}__`
+          iframes.push(`<iframe${safeAttrs}></iframe>`)
+          return placeholder
+        }
+      } catch {
+        // Invalid URL, skip
+      }
+    }
+    return ''
+  })
+
+  // Remove all other iframes (untrusted)
+  sanitized = sanitized.replace(/<iframe\b[^>]*><\/iframe>/gi, '')
+
+  // Restore allowed iframes
+  iframes.forEach((iframe, index) => {
+    sanitized = sanitized.replace(`__IFRAME_${index}__`, iframe)
+  })
+
+  // Remove scripts and event handlers
+  sanitized = sanitized
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
     .replace(/on\w+="[^"]*"/gi, '')
     .replace(/on\w+='[^']*'/gi, '')
     .replace(/javascript:/gi, '')
     .replace(/data:/gi, '')
+
+  return sanitized
 }
 
 interface ContactProps {
