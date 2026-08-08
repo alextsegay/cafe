@@ -78,7 +78,9 @@ async function getSiteMetadata(): Promise<Metadata> {
   }
 }
 
-export const metadata: Metadata = await getSiteMetadata()
+export async function generateMetadata(): Promise<Metadata> {
+  return getSiteMetadata()
+}
 
 export const viewport: Viewport = {
   themeColor: [
