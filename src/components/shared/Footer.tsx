@@ -12,6 +12,7 @@ interface FooterProps {
   address?: string
   phone?: string
   email?: string
+  slug?: string
   openingHours?: {
     monday: { open: string; close: string }
     tuesday: { open: string; close: string }
@@ -33,10 +34,12 @@ export function Footer({
   address,
   phone,
   email,
+  slug,
   openingHours,
   socialLinks,
 }: FooterProps) {
   const displayCafeName = cafeName || config.cafe.name
+  const menuHref = `/menu/${slug || config.cafe.slug}`
   const { theme } = useTheme()
   const { t } = useI18n()
 
@@ -99,7 +102,7 @@ export function Footer({
                 </Link>
               </li>
               <li>
-                <Link href={`/menu/${config.cafe.slug}`} className="text-sm text-muted-foreground hover:text-amber-600 transition-colors">
+                <Link href={menuHref} className="text-sm text-muted-foreground hover:text-amber-600 transition-colors">
                   {t('hero.cta')}
                 </Link>
               </li>

@@ -25,50 +25,40 @@ export async function PUT(request: Request) {
 
     const data = await request.json()
 
-    const cafe = await prisma.cafe.upsert({
-      where: { slug: data.slug || config.cafe.slug },
-      update: {
-        name: data.name,
-        logo: data.logo,
-        heroImage: data.heroImage,
-        tagline: data.tagline,
-        address: data.address,
-        phone: data.phone,
-        email: data.email,
-        primaryColor: data.primaryColor,
-        secondaryColor: data.secondaryColor,
-        language: data.language,
-        openingHours: data.openingHours,
-        socialLinks: data.socialLinks,
-        dailySpecial: data.dailySpecial,
-        dailySpecialUpdatedAt: data.dailySpecialUpdatedAt,
-        mapEmbed: data.mapEmbed,
-        aboutTitle: data.aboutTitle,
-        aboutDescription: data.aboutDescription,
-        aboutImage: data.aboutImage,
-      },
-      create: {
-        name: data.name || config.cafe.name,
-        slug: config.cafe.slug,
-        logo: data.logo,
-        heroImage: data.heroImage,
-        tagline: data.tagline,
-        address: data.address,
-        phone: data.phone,
-        email: data.email,
-        primaryColor: data.primaryColor || config.cafe.primaryColor,
-        secondaryColor: data.secondaryColor || config.cafe.secondaryColor,
-        language: data.language || config.cafe.language,
-        openingHours: data.openingHours,
-        socialLinks: data.socialLinks,
-        dailySpecial: data.dailySpecial,
-        dailySpecialUpdatedAt: data.dailySpecialUpdatedAt,
-        mapEmbed: data.mapEmbed,
-        aboutTitle: data.aboutTitle,
-        aboutDescription: data.aboutDescription,
-        aboutImage: data.aboutImage,
-      },
-    })
+    const existingCafe = await prisma.cafe.findFirst()
+    const cafeData = {
+      name: data.name,
+      slug: data.slug || config.cafe.slug,
+      logo: data.logo,
+      heroImage: data.heroImage,
+      tagline: data.tagline,
+      address: data.address,
+      phone: data.phone,
+      email: data.email,
+      primaryColor: data.primaryColor || config.cafe.primaryColor,
+      secondaryColor: data.secondaryColor || config.cafe.secondaryColor,
+      language: data.language || config.cafe.language,
+      openingHours: data.openingHours,
+      socialLinks: data.socialLinks,
+      dailySpecial: data.dailySpecial,
+      dailySpecialUpdatedAt: data.dailySpecialUpdatedAt,
+      mapEmbed: data.mapEmbed,
+      aboutTitle: data.aboutTitle,
+      aboutDescription: data.aboutDescription,
+      aboutImage: data.aboutImage,
+    }
+
+    const cafe = existingCafe
+      ? await prisma.cafe.update({
+          where: { id: existingCafe.id },
+          data: cafeData,
+        })
+      : await prisma.cafe.create({
+          data: {
+            ...cafeData,
+            name: data.name || config.cafe.name,
+          },
+        })
 
     return NextResponse.json(cafe)
   } catch (error) {
