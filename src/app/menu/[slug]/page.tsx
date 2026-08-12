@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { MenuClient } from '@/components/menu/MenuItemCard'
 import { Navbar, Footer } from '@/components/shared'
 
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 interface MenuPageProps {
   params: Promise<{ slug: string }>
 }

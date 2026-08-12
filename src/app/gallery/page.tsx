@@ -3,6 +3,9 @@ import { GallerySection } from '@/components/landing'
 import { prisma } from '@/lib/prisma'
 import type { Gallery } from '@/types'
 
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 async function getData() {
   try {
     const [cafe, gallery] = await Promise.all([

@@ -2,6 +2,9 @@ import { Navbar, Footer } from '@/components/shared'
 import { About } from '@/components/landing'
 import { prisma } from '@/lib/prisma'
 
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 async function getData() {
   try {
     const cafe = await prisma.cafe.findFirst()
