@@ -79,6 +79,7 @@ export default async function MenuPage() {
       />
       <Footer
         cafeName={data.cafe.name}
+        slug={data.cafe.slug}
         address={data.cafe.address || undefined}
         phone={data.cafe.phone || undefined}
         email={data.cafe.email || undefined}

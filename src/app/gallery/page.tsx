@@ -50,6 +50,7 @@ export default async function GalleryPage() {
       <GallerySection images={gallery} />
       <Footer
         cafeName={cafe?.name}
+        slug={cafe?.slug}
         address={cafe?.address || undefined}
         phone={cafe?.phone || undefined}
         email={cafe?.email || undefined}

@@ -44,6 +44,7 @@ export default async function AboutPage() {
       />
       <Footer
         cafeName={cafe?.name}
+        slug={cafe?.slug}
         address={cafe?.address || undefined}
         phone={cafe?.phone || undefined}
         email={cafe?.email || undefined}
