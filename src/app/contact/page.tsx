@@ -2,6 +2,9 @@ import { Navbar, Footer } from '@/components/shared'
 import { Contact } from '@/components/landing'
 import { prisma } from '@/lib/prisma'
 
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 async function getData() {
   try {
     const cafe = await prisma.cafe.findFirst()
@@ -48,6 +51,7 @@ export default async function ContactPage() {
       />
       <Footer
         cafeName={cafe?.name}
+        slug={cafe?.slug}
         address={cafe?.address || undefined}
         phone={cafe?.phone || undefined}
         email={cafe?.email || undefined}

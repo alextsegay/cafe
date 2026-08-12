@@ -7,7 +7,8 @@ import config from '@/lib/config'
 
 export async function POST(request: Request) {
   try {
-    const { email, password, action } = await request.json()
+    const body = await request.json()
+    const { email, password, action } = body
 
     // CSRF token endpoint
     if (action === 'get-csrf') {
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
         )
       }
 
-      const { currentPassword, newPassword } = await request.json()
+      const { currentPassword, newPassword } = body
 
       if (!currentPassword || !newPassword) {
         return NextResponse.json(

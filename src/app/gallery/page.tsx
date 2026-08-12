@@ -3,6 +3,9 @@ import { GallerySection } from '@/components/landing'
 import { prisma } from '@/lib/prisma'
 import type { Gallery } from '@/types'
 
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 async function getData() {
   try {
     const [cafe, gallery] = await Promise.all([
@@ -50,6 +53,7 @@ export default async function GalleryPage() {
       <GallerySection images={gallery} />
       <Footer
         cafeName={cafe?.name}
+        slug={cafe?.slug}
         address={cafe?.address || undefined}
         phone={cafe?.phone || undefined}
         email={cafe?.email || undefined}

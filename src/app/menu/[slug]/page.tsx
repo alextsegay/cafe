@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { MenuClient } from '@/components/menu/MenuItemCard'
 import { Navbar, Footer } from '@/components/shared'
 
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 interface MenuPageProps {
   params: Promise<{ slug: string }>
 }
@@ -95,6 +98,7 @@ export default async function MenuPage({ params }: MenuPageProps) {
       />
       <Footer
         cafeName={data.cafe.name}
+        slug={data.cafe.slug}
         address={data.cafe.address || undefined}
         phone={data.cafe.phone || undefined}
         email={data.cafe.email || undefined}
