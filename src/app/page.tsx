@@ -2,6 +2,9 @@ import { Hero, About, FeaturedMenu, GallerySection, Testimonials, Contact } from
 import { Navbar, Footer } from '@/components/shared'
 import { prisma } from '@/lib/prisma'
 
+export const revalidate = 0
+export const dynamic = 'force-dynamic'
+
 async function getData() {
   try {
     const [cafe, menuItems, gallery] = await Promise.all([
@@ -68,6 +71,7 @@ export default async function HomePage() {
       />
       <Footer
         cafeName={cafe?.name}
+        slug={cafe?.slug}
         address={cafe?.address || undefined}
         phone={cafe?.phone || undefined}
         email={cafe?.email || undefined}

@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, type MutableRefObject } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Save, Loader2, Image as ImageIcon, KeyRound, Eye, EyeOff } from 'lucide-react'
-import { Button, Input, Select } from '@/components/ui'
+import { Save, Loader2, KeyRound, Eye, EyeOff } from 'lucide-react'
+import { Button, Input } from '@/components/ui'
 import config from '@/lib/config'
 import { useI18n } from '@/lib/i18n'
+
+type MessageType = 'success' | 'error'
 
 interface CafeSettings {
   id?: string
@@ -44,6 +47,7 @@ interface CafeSettings {
 
 export default function SettingsPage() {
   const { t } = useI18n()
+  const router = useRouter()
   const [settings, setSettings] = useState<CafeSettings>({
     name: '',
     slug: config.cafe.slug,
@@ -80,6 +84,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState<MessageType>('success')
   const [cafeData, setCafeData] = useState<any>(null)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -89,7 +94,40 @@ export default function SettingsPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordMessage, setPasswordMessage] = useState('')
+  const [passwordMessageType, setPasswordMessageType] = useState<MessageType>('success')
   const [csrfToken, setCsrfToken] = useState('')
+  const settingsMessageTimeout = useRef<number | null>(null)
+  const passwordMessageTimeout = useRef<number | null>(null)
+
+  const showMessage = (
+    setter: (message: string) => void,
+    typeSetter: (type: MessageType) => void,
+    timeoutRef: MutableRefObject<number | null>,
+    text: string,
+    type: MessageType,
+  ) => {
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current)
+    }
+
+    typeSetter(type)
+    setter(text)
+    timeoutRef.current = window.setTimeout(() => {
+      setter('')
+      timeoutRef.current = null
+    }, 5000)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (settingsMessageTimeout.current) {
+        window.clearTimeout(settingsMessageTimeout.current)
+      }
+      if (passwordMessageTimeout.current) {
+        window.clearTimeout(passwordMessageTimeout.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     // Fetch CSRF token
@@ -120,7 +158,7 @@ export default function SettingsPage() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/cafe')
+      const res = await fetch('/api/cafe', { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         if (data) {
@@ -200,7 +238,7 @@ export default function SettingsPage() {
     setPasswordMessage('')
 
     if (newPassword !== confirmPassword) {
-      setPasswordMessage('New passwords do not match')
+      showMessage(setPasswordMessage, setPasswordMessageType, passwordMessageTimeout, 'New passwords do not match', 'error')
       return
     }
 
@@ -223,15 +261,15 @@ export default function SettingsPage() {
       const data = await res.json()
 
       if (res.ok) {
-        setPasswordMessage('Password changed successfully!')
+        showMessage(setPasswordMessage, setPasswordMessageType, passwordMessageTimeout, 'Password changed successfully!', 'success')
         setCurrentPassword('')
         setNewPassword('')
         setConfirmPassword('')
       } else {
-        setPasswordMessage(data.error || 'Failed to change password')
+        showMessage(setPasswordMessage, setPasswordMessageType, passwordMessageTimeout, data.error || 'Failed to change password', 'error')
       }
     } catch {
-      setPasswordMessage('An error occurred. Please try again.')
+      showMessage(setPasswordMessage, setPasswordMessageType, passwordMessageTimeout, 'An error occurred. Please try again.', 'error')
     } finally {
       setIsChangingPassword(false)
     }
@@ -255,15 +293,16 @@ export default function SettingsPage() {
       })
 
       if (res.ok) {
-        setMessage(t('admin.settingsSaved'))
-        setTimeout(() => setMessage(''), 3000)
-        fetchSettings() // Refresh to get updated timestamp
+        const updatedCafe = await res.json()
+        setCafeData(updatedCafe)
+        showMessage(setMessage, setMessageType, settingsMessageTimeout, t('admin.settingsSaved'), 'success')
+        router.refresh()
       } else {
         const errorData = await res.json().catch(() => ({}))
-        setMessage(errorData.error || t('admin.saveFailed'))
+        showMessage(setMessage, setMessageType, settingsMessageTimeout, errorData.error || t('admin.saveFailed'), 'error')
       }
     } catch (error) {
-      setMessage(t('admin.saveError'))
+      showMessage(setMessage, setMessageType, settingsMessageTimeout, t('admin.saveError'), 'error')
     } finally {
       setIsSaving(false)
     }
@@ -303,21 +342,28 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {(message || passwordMessage) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none px-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className={`pointer-events-auto max-w-md rounded-2xl px-6 py-4 text-center text-sm font-medium shadow-2xl backdrop-blur-md ${
+              (passwordMessage ? passwordMessageType : messageType) === 'success'
+                ? 'bg-green-100/95 text-green-800 dark:bg-green-900/90 dark:text-green-100'
+                : 'bg-red-100/95 text-red-800 dark:bg-red-900/90 dark:text-red-100'
+            }`}
+          >
+            {passwordMessage || message}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold">{t('admin.settings')}</h1>
           <p className="text-muted-foreground mt-1">{t('admin.settingsSubtitle')}</p>
         </div>
-        {message && (
-          <div className={`px-4 py-2 rounded-xl text-sm ${
-            message.includes('success') 
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-          }`}>
-            {message}
-          </div>
-        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -738,8 +784,18 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Change Password */}
-        <div className="glass rounded-2xl p-6 space-y-6">
+
+        {/* Submit */}
+        <div className="flex justify-end">
+          <Button type="submit" isLoading={isSaving} size="lg">
+            <Save className="w-4 h-4 mr-2" />
+            Save Settings
+          </Button>
+        </div>
+      </form>
+
+      {/* Change Password */}
+      <div className="glass rounded-2xl p-6 space-y-6">
           <h2 className="font-semibold text-lg flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-amber-500" />
             Change Password
@@ -747,16 +803,6 @@ export default function SettingsPage() {
           <p className="text-sm text-muted-foreground">
             Update your admin password. You'll need to use the new password next time you sign in.
           </p>
-
-          {passwordMessage && (
-            <div className={`p-4 rounded-xl text-sm ${
-              passwordMessage.includes('successfully')
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-            }`}>
-              {passwordMessage}
-            </div>
-          )}
 
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div className="relative">
@@ -820,14 +866,6 @@ export default function SettingsPage() {
           </form>
         </div>
 
-        {/* Submit */}
-        <div className="flex justify-end">
-          <Button type="submit" isLoading={isSaving} size="lg">
-            <Save className="w-4 h-4 mr-2" />
-            Save Settings
-          </Button>
-        </div>
-      </form>
     </div>
   )
 }
