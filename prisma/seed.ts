@@ -5,6 +5,11 @@ import config from '../src/lib/config'
 const prisma = new PrismaClient()
 
 async function main() {
+  // Never seed with the default password in production.
+  if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_PASSWORD) {
+    throw new Error('ADMIN_PASSWORD environment variable is required before seeding in production')
+  }
+
   // Create admin user
   const hashedPassword = await bcrypt.hash(config.admin.password, 10)
 

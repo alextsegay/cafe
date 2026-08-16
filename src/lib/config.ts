@@ -21,18 +21,10 @@ export const config = {
   },
 
   // Admin credentials (used for seeding). The password default is only for
-  // local development — production fails loudly instead of seeding a known
-  // default password.
+  // local development — see prisma/seed.ts for the production guard.
   admin: {
     email: process.env.ADMIN_EMAIL || 'admin@cafemenu.com',
-    password: (() => {
-      const password = process.env.ADMIN_PASSWORD
-      if (password) return password
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('ADMIN_PASSWORD environment variable is required in production')
-      }
-      return 'admin123'
-    })(),
+    password: process.env.ADMIN_PASSWORD || 'admin123',
     name: process.env.ADMIN_NAME || 'Admin',
   },
 
