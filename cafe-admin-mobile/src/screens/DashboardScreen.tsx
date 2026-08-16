@@ -13,9 +13,12 @@ import {
   ScrollView,
   Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
-import { fetchWithAuth, API_BASE_URL } from '../services/api';
+import { fetchWithAuth } from '../services/api';
+
+const CURRENCY = 'ETB';
 
 interface Category {
   id: string;
@@ -51,6 +54,11 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
     fetchData();
   }, []);
 
+  const handleSessionExpired = () => {
+    Alert.alert('Session Expired', 'Please sign in again.');
+    onLogout();
+  };
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -58,6 +66,11 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
         fetchWithAuth('/menu'),
         fetchWithAuth('/categories'),
       ]);
+
+      if (itemsRes.status === 401 || catRes.status === 401) {
+        handleSessionExpired();
+        return;
+      }
 
       if (itemsRes.ok) {
         const itemsData = await itemsRes.json();
@@ -110,7 +123,7 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.8,
     });
@@ -129,6 +142,11 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
           method: 'POST',
           body: formData,
         });
+
+        if (uploadRes.status === 401) {
+          handleSessionExpired();
+          return;
+        }
 
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
@@ -149,6 +167,10 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
       Alert.alert('Error', 'Name and price are required');
       return;
     }
+    if (!selectedCategory) {
+      Alert.alert('Error', 'Please select a category');
+      return;
+    }
 
     setIsSaving(true);
     const endpoint = editingItem ? `/menu/${editingItem.id}` : '/menu';
@@ -163,9 +185,14 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
           price: parseFloat(price),
           image,
           available,
-          categoryId: selectedCategory || categories[0]?.id,
+          categoryId: selectedCategory,
         }),
       });
+
+      if (res.status === 401) {
+        handleSessionExpired();
+        return;
+      }
 
       if (res.ok) {
         setModalVisible(false);
@@ -190,6 +217,10 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
         onPress: async () => {
           try {
             const res = await fetchWithAuth(`/menu/${id}`, { method: 'DELETE' });
+            if (res.status === 401) {
+              handleSessionExpired();
+              return;
+            }
             if (res.ok) {
               fetchData();
             } else {
@@ -209,7 +240,7 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -260,7 +291,9 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
 
               <View style={styles.itemDetails}>
                 <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+                <Text style={styles.itemPrice}>
+                  {CURRENCY} {item.price.toFixed(2)}
+                </Text>
                 <Text
                   style={[
                     styles.statusBadge,
@@ -308,7 +341,7 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
                 placeholderTextColor="#78716c"
               />
 
-              <Text style={styles.label}>Price ($)</Text>
+              <Text style={styles.label}>Price ({CURRENCY})</Text>
               <TextInput
                 style={styles.modalInput}
                 value={price}
@@ -317,6 +350,38 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
                 keyboardType="numeric"
                 placeholderTextColor="#78716c"
               />
+
+              <Text style={styles.label}>Category</Text>
+              {categories.length > 0 ? (
+                <View style={styles.categoryRow}>
+                  {categories.map((cat) => {
+                    const selected = selectedCategory === cat.id;
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={[
+                          styles.categoryChip,
+                          selected && styles.categoryChipSelected,
+                        ]}
+                        onPress={() => setSelectedCategory(cat.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryChipText,
+                            selected && styles.categoryChipTextSelected,
+                          ]}
+                        >
+                          {cat.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={styles.emptyCategoriesText}>
+                  No categories found. Add one on the web admin first.
+                </Text>
+              )}
 
               <Text style={styles.label}>Image</Text>
               <TouchableOpacity
@@ -359,7 +424,7 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -367,7 +432,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1c1917',
-    paddingTop: 50,
     paddingHorizontal: 16,
   },
   header: {
@@ -375,6 +439,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    marginTop: 16,
   },
   headerTitle: {
     fontSize: 24,
@@ -518,6 +583,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: '#ffffff',
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  categoryChip: {
+    backgroundColor: '#1c1917',
+    borderWidth: 1,
+    borderColor: '#44403c',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  categoryChipSelected: {
+    backgroundColor: '#d97706',
+    borderColor: '#d97706',
+  },
+  categoryChipText: {
+    color: '#d6d3d1',
+    fontSize: 14,
+  },
+  categoryChipTextSelected: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  emptyCategoriesText: {
+    color: '#a8a29e',
+    fontSize: 13,
+    marginTop: 4,
   },
   uploadBox: {
     backgroundColor: '#1c1917',

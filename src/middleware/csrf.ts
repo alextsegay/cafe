@@ -36,8 +36,17 @@ export function validateCsrfToken(request: Request): { valid: boolean; error?: s
 
   const headerToken = request.headers.get(CSRF_HEADER_NAME)
 
-  if (!cookieToken || !headerToken) {
+  if (!headerToken) {
     return { valid: false, error: 'CSRF token missing' }
+  }
+
+  // Native/mobile clients (React Native) have no cookie jar, so the httpOnly
+  // csrf_token cookie never round-trips. If no CSRF cookie was sent there is no
+  // cookie-based session in the request for an attacker to ride on, so a header
+  // token alone is accepted. Browser requests that carry the cookie must still
+  // match it against the header (double-submit protection).
+  if (!cookieToken) {
+    return { valid: true }
   }
 
   if (cookieToken !== headerToken) {

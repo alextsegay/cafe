@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { prisma } from './prisma'
 
 const JWT_SECRET = process.env.JWT_SECRET!
@@ -37,8 +37,15 @@ export function verifyToken(token: string): TokenPayload | null {
 
 export async function getCurrentUser() {
   const cookieStore = await cookies()
-  const token = cookieStore.get('auth_token')?.value
-  
+  const headerStore = await headers()
+
+  // Prefer an explicit Authorization: Bearer token (used by the native mobile
+  // app, which cannot rely on cookies). Fall back to the httpOnly session cookie
+  // used by the browser admin dashboard.
+  const authHeader = headerStore.get('authorization')
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null
+  const token = bearerToken || cookieStore.get('auth_token')?.value
+
   if (!token) return null
   
   const payload = verifyToken(token)

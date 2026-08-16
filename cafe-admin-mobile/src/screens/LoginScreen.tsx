@@ -14,6 +14,7 @@ import { API_BASE_URL, getCsrfToken } from '../services/api';
 
 interface LoginResponse {
   success: boolean;
+  token?: string;
   user?: {
     id: string;
     email: string;
@@ -24,8 +25,8 @@ interface LoginResponse {
 }
 
 export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
-  const [email, setEmail] = useState('admin@cafemenu.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -58,23 +59,17 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
       const data: LoginResponse = await response.json();
 
       if (response.ok && data.success && data.user) {
-        // Step 3: Extract JWT from Set-Cookie header
-        const setCookieHeader = response.headers.get('set-cookie');
-        let jwtToken: string | null = null;
+        // Step 3: Store the JWT returned in the response body. React Native's
+        // fetch does not expose Set-Cookie headers, so we cannot extract the
+        // token from a cookie — the server returns it explicitly instead.
+        const jwtToken = data.token;
 
-        if (setCookieHeader) {
-          const match = setCookieHeader.match(/auth_token=([^;]+)/);
-          if (match) {
-            jwtToken = match[1];
-          }
+        if (!jwtToken) {
+          Alert.alert('Error', 'Server did not return an auth token. Please try again.');
+          return;
         }
 
-        if (jwtToken) {
-          await SecureStore.setItemAsync('authToken', jwtToken);
-        } else {
-          // Fallback: store user info if cookie not available (e.g., in Expo Go)
-          await SecureStore.setItemAsync('authToken', JSON.stringify(data.user));
-        }
+        await SecureStore.setItemAsync('authToken', jwtToken);
 
         onLoginSuccess();
       } else {
