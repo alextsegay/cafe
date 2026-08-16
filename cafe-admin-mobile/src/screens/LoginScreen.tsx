@@ -52,6 +52,7 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
           'x-csrf-token': csrfToken,
         },
         body: JSON.stringify({ action: 'login', email, password }),
+        credentials: 'include',
       });
 
       const data: LoginResponse = await response.json();

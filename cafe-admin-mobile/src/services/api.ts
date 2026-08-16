@@ -19,6 +19,7 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
+    credentials: 'include',
   });
 
   return response;
@@ -30,6 +31,7 @@ export async function getCsrfToken(): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'get-csrf' }),
+      credentials: 'include',
     });
 
     if (response.ok) {

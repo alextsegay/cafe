@@ -20,7 +20,7 @@ export function getCsrfToken(): string {
     cookieStore.set(CSRF_COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     })
