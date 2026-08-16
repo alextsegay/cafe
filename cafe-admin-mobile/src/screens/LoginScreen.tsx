@@ -10,7 +10,18 @@ import {
   Image,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from '../services/api';
+import { API_BASE_URL, getCsrfToken } from '../services/api';
+
+interface LoginResponse {
+  success: boolean;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+  };
+  error?: string;
+}
 
 export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const [email, setEmail] = useState('admin@cafemenu.com');
@@ -25,17 +36,45 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
 
     setIsLoading(true);
     try {
+      // Step 1: Get CSRF token
+      const csrfToken = await getCsrfToken();
+      if (!csrfToken) {
+        Alert.alert('Error', 'Failed to initialize session. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Send login request with CSRF token
       const response = await fetch(`${API_BASE_URL}/auth`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken,
+        },
         body: JSON.stringify({ action: 'login', email, password }),
       });
 
-      const data = await response.json();
+      const data: LoginResponse = await response.json();
 
-      if (response.ok && data.user) {
-        // Save dummy/session status
-        await SecureStore.setItemAsync('userToken', 'admin_logged_in');
+      if (response.ok && data.success && data.user) {
+        // Step 3: Extract JWT from Set-Cookie header
+        const setCookieHeader = response.headers.get('set-cookie');
+        let jwtToken: string | null = null;
+
+        if (setCookieHeader) {
+          const match = setCookieHeader.match(/auth_token=([^;]+)/);
+          if (match) {
+            jwtToken = match[1];
+          }
+        }
+
+        if (jwtToken) {
+          await SecureStore.setItemAsync('authToken', jwtToken);
+        } else {
+          // Fallback: store user info if cookie not available (e.g., in Expo Go)
+          await SecureStore.setItemAsync('authToken', JSON.stringify(data.user));
+        }
+
         onLoginSuccess();
       } else {
         Alert.alert('Login Failed', data.error || 'Invalid credentials');

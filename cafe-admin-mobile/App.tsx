@@ -13,7 +13,7 @@ export default function App() {
 
   const checkLoginStatus = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await SecureStore.getItemAsync('authToken');
       setIsLoggedIn(!!token);
     } catch {
       setIsLoggedIn(false);

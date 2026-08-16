@@ -15,7 +15,12 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL } from '../services/api';
+import { fetchWithAuth, API_BASE_URL } from '../services/api';
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface MenuItem {
   id: string;
@@ -24,11 +29,6 @@ interface MenuItem {
   image: string | null;
   available: boolean;
   categoryId: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
 }
 
 export default function DashboardScreen({ onLogout }: { onLogout: () => void }) {
@@ -55,13 +55,22 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
     setIsLoading(true);
     try {
       const [itemsRes, catRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/menu`),
-        fetch(`${API_BASE_URL}/categories`),
+        fetchWithAuth('/menu'),
+        fetchWithAuth('/categories'),
       ]);
 
       if (itemsRes.ok) {
         const itemsData = await itemsRes.json();
-        setItems(itemsData);
+        // Backend returns items with nested category object; map to flat shape
+        const mappedItems: MenuItem[] = itemsData.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          image: item.image,
+          available: item.available,
+          categoryId: item.category?.id || item.categoryId || '',
+        }));
+        setItems(mappedItems);
       }
       if (catRes.ok) {
         const catData = await catRes.json();
@@ -116,7 +125,7 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
       formData.append('file', { uri: localUri, name: filename, type } as any);
 
       try {
-        const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
+        const uploadRes = await fetchWithAuth('/upload', {
           method: 'POST',
           body: formData,
         });
@@ -126,7 +135,8 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
           setImage(uploadData.url);
           Alert.alert('Success', 'Image uploaded successfully!');
         } else {
-          Alert.alert('Upload Error', 'Failed to upload image');
+          const errorData = await uploadRes.json();
+          Alert.alert('Upload Error', errorData.error || 'Failed to upload image');
         }
       } catch (e) {
         Alert.alert('Error', 'Error uploading image');
@@ -141,11 +151,11 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
     }
 
     setIsSaving(true);
-    const url = editingItem ? `${API_BASE_URL}/menu/${editingItem.id}` : `${API_BASE_URL}/menu`;
+    const endpoint = editingItem ? `/menu/${editingItem.id}` : '/menu';
     const method = editingItem ? 'PUT' : 'POST';
 
     try {
-      const res = await fetch(url, {
+      const res = await fetchWithAuth(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -162,7 +172,7 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
         fetchData();
       } else {
         const errorData = await res.json();
-        Alert.alert('Save Failed', JSON.stringify(errorData.error));
+        Alert.alert('Save Failed', JSON.stringify(errorData.error || errorData));
       }
     } catch (e) {
       Alert.alert('Error', 'An error occurred saving item');
@@ -179,9 +189,12 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
         style: 'destructive',
         onPress: async () => {
           try {
-            const res = await fetch(`${API_BASE_URL}/menu/${id}`, { method: 'DELETE' });
+            const res = await fetchWithAuth(`/menu/${id}`, { method: 'DELETE' });
             if (res.ok) {
               fetchData();
+            } else {
+              const errorData = await res.json();
+              Alert.alert('Error', errorData.error || 'Failed to delete item');
             }
           } catch (e) {
             Alert.alert('Error', 'Failed to delete item');
@@ -206,7 +219,7 @@ export default function DashboardScreen({ onLogout }: { onLogout: () => void }) 
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={async () => {
-            await SecureStore.deleteItemAsync('userToken');
+            await SecureStore.deleteItemAsync('authToken');
             onLogout();
           }}
         >

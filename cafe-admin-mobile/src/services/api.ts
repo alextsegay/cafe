@@ -5,14 +5,14 @@ export const API_BASE_URL = 'https://cafe-phi-hazel.vercel.app/api';
 export async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   let token: string | null = null;
   try {
-    token = await SecureStore.getItemAsync('userToken');
+    token = await SecureStore.getItemAsync('authToken');
   } catch (error) {
     console.log('SecureStore read error', error);
   }
-  
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(token ? { Cookie: `token=${token}` } : {}),
+    ...(token ? { Cookie: `auth_token=${token}` } : {}),
     ...((options.headers as Record<string, string>) || {}),
   };
 
@@ -22,4 +22,22 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
   });
 
   return response;
+}
+
+export async function getCsrfToken(): Promise<string | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-csrf' }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.csrfToken || null;
+    }
+  } catch (error) {
+    console.log('CSRF token fetch error', error);
+  }
+  return null;
 }
