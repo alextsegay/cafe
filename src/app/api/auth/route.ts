@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword, verifyPassword, generateToken, setAuthCookie, getCurrentUser } from '@/lib/auth'
 import { checkRateLimit, getClientIdentifier } from '@/middleware/redis-rate-limit'
 import { validateCsrfToken, getCsrfToken } from '@/middleware/csrf'
-import config from '@/lib/config'
 
 export async function POST(request: Request) {
   try {
@@ -24,8 +23,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Rate limit login and register attempts
-    if (action === 'login' || action === 'register') {
+    // Rate limit login attempts
+    if (action === 'login') {
       const identifier = getClientIdentifier(request)
       const rateLimit = await checkRateLimit(identifier)
 
@@ -95,9 +94,15 @@ export async function POST(request: Request) {
 
       await setAuthCookie(token)
 
+      // Only return the raw JWT in the body to native clients that need it
+      // (React Native cannot read Set-Cookie headers). Browser logins receive
+      // the token exclusively through the httpOnly cookie, so an XSS or
+      // extension cannot lift a durable token from the response body.
+      const isMobileClient = request.headers.get('x-client') === 'mobile'
+
       return NextResponse.json({
         success: true,
-        token,
+        ...(isMobileClient ? { token } : {}),
         user: {
           id: user.id,
           email: user.email,
@@ -166,54 +171,13 @@ export async function POST(request: Request) {
     }
 
     if (action === 'register') {
-      const existing = await prisma.user.findUnique({
-        where: { email },
-      })
-
-      if (existing) {
-        return NextResponse.json(
-          { error: 'User already exists' },
-          { status: 400 }
-        )
-      }
-
-      // Password complexity validation
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
-      if (!passwordRegex.test(password)) {
-        return NextResponse.json(
-          { error: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)' },
-          { status: 400 }
-        )
-      }
-
-      const hashedPassword = await hashPassword(password)
-      const user = await prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name: config.admin.name,
-          role: 'admin',
-        },
-      })
-
-      const token = generateToken({
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-      })
-
-      await setAuthCookie(token)
-
-      return NextResponse.json({
-        success: true,
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        },
-      })
+      // Self-service registration is disabled — admin accounts are created via
+      // the configured ADMIN_EMAIL/ADMIN_PASSWORD (see prisma/seed.ts). Leaving
+      // this open would let anyone mint an admin account.
+      return NextResponse.json(
+        { error: 'Registration is disabled. Use the configured admin account instead.' },
+        { status: 403 }
+      )
     }
 
     if (action === 'logout') {

@@ -89,7 +89,10 @@ export async function getCsrfToken(): Promise<string | null> {
       `${API_BASE_URL}/auth`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client': 'mobile',
+        },
         body: JSON.stringify({ action: 'get-csrf' }),
       },
       DEFAULT_TIMEOUT_MS

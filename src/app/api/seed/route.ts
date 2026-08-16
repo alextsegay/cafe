@@ -9,8 +9,14 @@ import config from '@/lib/config'
 const SEED_SECRET = process.env.SEED_SECRET
 
 export async function GET(request: Request) {
-  // Guard: require secret if SEED_SECRET env var is set
-  if (SEED_SECRET) {
+  // Fail closed: seeding is only allowed with the secret, and in production it
+  // must be configured explicitly — otherwise anyone could re-seed the DB.
+  if (!SEED_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Seeding is disabled' }, { status: 403 })
+    }
+    // Local development without a secret keeps working for convenience.
+  } else {
     const { searchParams } = new URL(request.url)
     const provided = searchParams.get('secret')
     if (provided !== SEED_SECRET) {

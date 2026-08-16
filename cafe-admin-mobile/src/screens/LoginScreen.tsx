@@ -58,6 +58,9 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
           headers: {
             'Content-Type': 'application/json',
             'x-csrf-token': csrfToken,
+            // Tells the server this is a native client so it returns the JWT
+            // in the response body (browser logins only get the httpOnly cookie).
+            'x-client': 'mobile',
           },
           body: JSON.stringify({ action: 'login', email, password }),
           signal: controller.signal,
