@@ -9,8 +9,9 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL, getCsrfToken } from '../services/api';
+import { API_BASE_URL, getCsrfToken, isTimeoutError } from '../services/api';
+import { setToken } from '../utils/storage';
+import { showAlert } from '../utils/notify';
 
 interface LoginResponse {
   success: boolean;
@@ -31,7 +32,7 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+      showAlert('Error', 'Please enter email and password');
       return;
     }
 
@@ -40,21 +41,30 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
       // Step 1: Get CSRF token
       const csrfToken = await getCsrfToken();
       if (!csrfToken) {
-        Alert.alert('Error', 'Failed to initialize session. Please try again.');
+        showAlert('Error', 'Failed to initialize session. Please try again.');
         setIsLoading(false);
         return;
       }
 
-      // Step 2: Send login request with CSRF token
-      const response = await fetch(`${API_BASE_URL}/auth`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken,
-        },
-        body: JSON.stringify({ action: 'login', email, password }),
-        credentials: 'include',
-      });
+      // Step 2: Send login request with CSRF token. React Native's fetch has no
+      // timeout, so abort after 15s to avoid an infinite spinner on a slow or
+      // hanging connection.
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE_URL}/auth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': csrfToken,
+          },
+          body: JSON.stringify({ action: 'login', email, password }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       const data: LoginResponse = await response.json();
 
@@ -65,18 +75,26 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
         const jwtToken = data.token;
 
         if (!jwtToken) {
-          Alert.alert('Error', 'Server did not return an auth token. Please try again.');
+          showAlert('Error', 'Server did not return an auth token. Please try again.');
           return;
         }
 
-        await SecureStore.setItemAsync('authToken', jwtToken);
+        const stored = await setToken(jwtToken);
+        if (!stored) {
+          showAlert('Error', 'Failed to save your session on this device.');
+          return;
+        }
 
         onLoginSuccess();
       } else {
-        Alert.alert('Login Failed', data.error || 'Invalid credentials');
+        showAlert('Login Failed', data.error || 'Invalid credentials');
       }
     } catch (error) {
-      Alert.alert('Error', 'Network error. Please check your connection.');
+      if (isTimeoutError(error)) {
+        showAlert('Error', 'Request timed out. Please check your connection.');
+      } else {
+        showAlert('Error', 'Network error. Please check your connection.');
+      }
     } finally {
       setIsLoading(false);
     }

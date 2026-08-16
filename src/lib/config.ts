@@ -20,10 +20,19 @@ export const config = {
     aboutDescription: process.env.NEXT_PUBLIC_CAFE_ABOUT_DESCRIPTION || '',
   },
 
-  // Admin credentials (used for seeding)
+  // Admin credentials (used for seeding). The password default is only for
+  // local development — production fails loudly instead of seeding a known
+  // default password.
   admin: {
     email: process.env.ADMIN_EMAIL || 'admin@cafemenu.com',
-    password: process.env.ADMIN_PASSWORD || 'admin123',
+    password: (() => {
+      const password = process.env.ADMIN_PASSWORD
+      if (password) return password
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('ADMIN_PASSWORD environment variable is required in production')
+      }
+      return 'admin123'
+    })(),
     name: process.env.ADMIN_NAME || 'Admin',
   },
 

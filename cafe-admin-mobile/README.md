@@ -5,10 +5,15 @@ React Native (Expo SDK 54) admin app for managing the café menu from a phone.
 ## Features
 
 - 🔐 Login with JWT (stored securely in `expo-secure-store`)
-- 🍽️ Menu item list with search
-- ➕ Create / edit / delete menu items
-- 🗂️ Assign items to categories
-- 📷 Upload item photos from the device gallery
+- 📊 Dashboard with stats and recent menu items
+- 🍽️ Menu item list with search, create / edit / delete, and photo upload
+- 🗂️ Categories: add, rename, delete, and reorder
+- 🖼️ Gallery: upload and remove café photos
+- ⚙️ Settings: café info, branding colors, social links, opening hours, daily special, about section
+- 🔑 Change admin password
+- 📲 QR code for the digital menu with share link
+- 🔔 Notifications: mark read / mark all read / delete
+- 💬 Contact messages: mark read / delete
 - 🔄 Session expiry handling — returns to login when the token expires
 
 ## Requirements
@@ -51,7 +56,6 @@ network for local development).
 
 ## Scope
 
-This is a lightweight companion to the web admin dashboard. It currently covers
-menu items and categories. Gallery, settings, QR codes, notifications, and
-password change remain available on the web admin
-(`/admin` on the backend).
+The mobile app mirrors the web admin dashboard (`/admin` on the backend):
+dashboard stats, menu, categories, gallery, settings, QR code, notifications,
+contact messages, and password change.

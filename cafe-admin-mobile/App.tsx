@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as SecureStore from 'expo-secure-store';
 import LoginScreen from './src/screens/LoginScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
-import { fetchWithAuth, clearAuthToken } from './src/services/api';
+import AppNavigator from './src/navigation/AppNavigator';
+import { fetchWithAuth, setUnauthorizedHandler, isTimeoutError } from './src/services/api';
+import { getToken } from './src/utils/storage';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
@@ -13,13 +13,14 @@ export default function App() {
     checkLoginStatus();
   }, []);
 
+  // Any 401 from the API (expired/invalid token) sends the user back to login.
+  useEffect(() => {
+    setUnauthorizedHandler(() => setIsLoggedIn(false));
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
   const checkLoginStatus = async () => {
-    let token: string | null = null;
-    try {
-      token = await SecureStore.getItemAsync('authToken');
-    } catch {
-      token = null;
-    }
+    const token = await getToken();
 
     // No stored token — show login.
     if (!token) {
@@ -36,12 +37,14 @@ export default function App() {
       if (response.ok) {
         setIsLoggedIn(true);
       } else if (response.status === 401) {
-        await clearAuthToken();
         setIsLoggedIn(false);
       } else {
         setIsLoggedIn(true);
       }
-    } catch {
+    } catch (error) {
+      if (isTimeoutError(error)) {
+        console.log('Session check timed out; keeping user logged in.');
+      }
       setIsLoggedIn(true);
     }
   };
@@ -58,13 +61,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
-        {isLoggedIn ? (
-          <DashboardScreen onLogout={() => setIsLoggedIn(false)} />
-        ) : (
-          <LoginScreen onLoginSuccess={() => setIsLoggedIn(true)} />
-        )}
-      </View>
+      {isLoggedIn ? (
+        <AppNavigator onLogout={() => setIsLoggedIn(false)} />
+      ) : (
+        <LoginScreen onLoginSuccess={() => setIsLoggedIn(true)} />
+      )}
     </SafeAreaProvider>
   );
 }

@@ -1,29 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  FlatList,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
-  Alert,
-  Modal,
-  TextInput,
   ScrollView,
-  Switch,
+  RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
 import { fetchWithAuth } from '../services/api';
-
-const CURRENCY = 'ETB';
-
-interface Category {
-  id: string;
-  name: string;
-}
+import { showAlert } from '../utils/notify';
+import { colors, CURRENCY } from '../theme';
 
 interface MenuItem {
   id: string;
@@ -31,641 +19,288 @@ interface MenuItem {
   price: number;
   image: string | null;
   available: boolean;
-  categoryId: string;
+  categoryName?: string;
+  createdAt?: string;
 }
 
-export default function DashboardScreen({ onLogout }: { onLogout: () => void }) {
+interface Stats {
+  menuItems: number;
+  categories: number;
+  hiddenItems: number;
+  galleryImages: number;
+}
+
+export default function DashboardScreen() {
   const [items, setItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [stats, setStats] = useState<Stats>({
+    menuItems: 0,
+    categories: 0,
+    hiddenItems: 0,
+    galleryImages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Modal State
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [image, setImage] = useState('');
-  const [available, setAvailable] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleSessionExpired = () => {
-    Alert.alert('Session Expired', 'Please sign in again.');
-    onLogout();
-  };
-
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async () => {
     try {
-      const [itemsRes, catRes] = await Promise.all([
+      const [menuRes, catRes, galleryRes] = await Promise.all([
         fetchWithAuth('/menu'),
         fetchWithAuth('/categories'),
+        fetchWithAuth('/gallery'),
       ]);
 
-      if (itemsRes.status === 401 || catRes.status === 401) {
-        handleSessionExpired();
-        return;
-      }
+      let menuItems: MenuItem[] = [];
+      let categoryNames: Record<string, string> = {};
+      let galleryCount = 0;
 
-      if (itemsRes.ok) {
-        const itemsData = await itemsRes.json();
-        // Backend returns items with nested category object; map to flat shape
-        const mappedItems: MenuItem[] = itemsData.map((item: any) => ({
+      if (menuRes.ok) {
+        const data = await menuRes.json();
+        menuItems = data.map((item: any) => ({
           id: item.id,
           name: item.name,
           price: item.price,
           image: item.image,
           available: item.available,
-          categoryId: item.category?.id || item.categoryId || '',
+          categoryName: item.category?.name || '',
+          createdAt: item.createdAt,
         }));
-        setItems(mappedItems);
       }
       if (catRes.ok) {
         const catData = await catRes.json();
-        setCategories(catData);
+        categoryNames = Object.fromEntries(catData.map((c: any) => [c.id, c.name]));
       }
+      if (galleryRes.ok) {
+        const galleryData = await galleryRes.json();
+        galleryCount = Array.isArray(galleryData) ? galleryData.length : 0;
+      }
+
+      setItems(menuItems);
+      setStats({
+        menuItems: menuItems.length,
+        categories: Object.keys(categoryNames).length,
+        hiddenItems: menuItems.filter((i) => !i.available).length,
+        galleryImages: galleryCount,
+      });
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch menu data');
+      showAlert('Error', 'Failed to load dashboard');
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const openModal = (item?: MenuItem) => {
-    if (item) {
-      setEditingItem(item);
-      setName(item.name);
-      setPrice(item.price.toString());
-      setImage(item.image || '');
-      setAvailable(item.available);
-      setSelectedCategory(item.categoryId);
-    } else {
-      setEditingItem(null);
-      setName('');
-      setPrice('');
-      setImage('');
-      setAvailable(true);
-      setSelectedCategory(categories[0]?.id || '');
-    }
-    setModalVisible(true);
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const pickImageFromPhone = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permission Denied', 'Permission to access photos is required');
-      return;
-    }
+  const recentItems = [...items]
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .slice(0, 5);
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
-    });
+  const statCards = [
+    { title: 'Menu Items', value: stats.menuItems, icon: 'restaurant' as const, color: colors.accent, key: 'menu' },
+    { title: 'Categories', value: stats.categories, icon: 'folder' as const, color: '#22c55e', key: 'cat' },
+    { title: 'Hidden Items', value: stats.hiddenItems, icon: 'eye-off' as const, color: '#a8a29e', key: 'hidden' },
+    { title: 'Gallery Images', value: stats.galleryImages, icon: 'images' as const, color: '#a855f7', key: 'gallery' },
+  ];
 
-    if (!result.canceled && result.assets[0]) {
-      const localUri = result.assets[0].uri;
-      const filename = localUri.split('/').pop() || 'photo.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image`;
-
-      const formData = new FormData();
-      formData.append('file', { uri: localUri, name: filename, type } as any);
-
-      try {
-        const uploadRes = await fetchWithAuth('/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (uploadRes.status === 401) {
-          handleSessionExpired();
-          return;
-        }
-
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          setImage(uploadData.url);
-          Alert.alert('Success', 'Image uploaded successfully!');
-        } else {
-          const errorData = await uploadRes.json();
-          Alert.alert('Upload Error', errorData.error || 'Failed to upload image');
-        }
-      } catch (e) {
-        Alert.alert('Error', 'Error uploading image');
-      }
-    }
-  };
-
-  const handleSaveItem = async () => {
-    if (!name || !price) {
-      Alert.alert('Error', 'Name and price are required');
-      return;
-    }
-    if (!selectedCategory) {
-      Alert.alert('Error', 'Please select a category');
-      return;
-    }
-
-    setIsSaving(true);
-    const endpoint = editingItem ? `/menu/${editingItem.id}` : '/menu';
-    const method = editingItem ? 'PUT' : 'POST';
-
-    try {
-      const res = await fetchWithAuth(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          price: parseFloat(price),
-          image,
-          available,
-          categoryId: selectedCategory,
-        }),
-      });
-
-      if (res.status === 401) {
-        handleSessionExpired();
-        return;
-      }
-
-      if (res.ok) {
-        setModalVisible(false);
-        fetchData();
-      } else {
-        const errorData = await res.json();
-        Alert.alert('Save Failed', JSON.stringify(errorData.error || errorData));
-      }
-    } catch (e) {
-      Alert.alert('Error', 'An error occurred saving item');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDeleteItem = async (id: string) => {
-    Alert.alert('Confirm Delete', 'Are you sure you want to delete this menu item?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const res = await fetchWithAuth(`/menu/${id}`, { method: 'DELETE' });
-            if (res.status === 401) {
-              handleSessionExpired();
-              return;
-            }
-            if (res.ok) {
-              fetchData();
-            } else {
-              const errorData = await res.json();
-              Alert.alert('Error', errorData.error || 'Failed to delete item');
-            }
-          } catch (e) {
-            Alert.alert('Error', 'Failed to delete item');
-          }
-        },
-      },
-    ]);
-  };
-
-  const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Café Management</Text>
-          <Text style={styles.headerSubtitle}>{items.length} Menu Items</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={async () => {
-            await SecureStore.deleteItemAsync('authToken');
-            onLogout();
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            fetchData();
           }}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Search & Add */}
-      <View style={styles.controlsRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search items..."
-          placeholderTextColor="#78716c"
-          value={search}
-          onChangeText={setSearch}
+          tintColor={colors.accent}
         />
-        <TouchableOpacity style={styles.addButton} onPress={() => openModal()}>
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+      }
+    >
+      <Text style={styles.subtitle}>Welcome back! Here's an overview of your café.</Text>
 
-      {/* Item List */}
-      {isLoading ? (
-        <ActivityIndicator size="large" color="#d97706" style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={filteredItems}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.itemCard}>
-              {item.image ? (
-                <Image source={{ uri: item.image }} style={styles.itemImage} />
-              ) : (
-                <View style={[styles.itemImage, styles.placeholderImage]}>
-                  <Text style={{ fontSize: 24 }}>☕</Text>
-                </View>
-              )}
-
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemPrice}>
-                  {CURRENCY} {item.price.toFixed(2)}
-                </Text>
-                <Text
-                  style={[
-                    styles.statusBadge,
-                    { color: item.available ? '#22c55e' : '#ef4444' },
-                  ]}
-                >
-                  {item.available ? '● Available' : '○ Unavailable'}
-                </Text>
-              </View>
-
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={() => openModal(item)}
-                >
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteItem(item.id)}
-                >
-                  <Text style={styles.deleteButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
+      {/* Stats Grid */}
+      <View style={styles.statsGrid}>
+        {statCards.map((stat) => (
+          <View key={stat.key} style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: stat.color }]}>
+              <Ionicons name={stat.icon} size={20} color="#fff" />
             </View>
-          )}
-        />
-      )}
-
-      {/* Modal Form */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ScrollView>
-              <Text style={styles.modalTitle}>
-                {editingItem ? 'Edit Menu Item' : 'New Menu Item'}
-              </Text>
-
-              <Text style={styles.label}>Name</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Cappuccino"
-                placeholderTextColor="#78716c"
-              />
-
-              <Text style={styles.label}>Price ({CURRENCY})</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={price}
-                onChangeText={setPrice}
-                placeholder="e.g. 4.50"
-                keyboardType="numeric"
-                placeholderTextColor="#78716c"
-              />
-
-              <Text style={styles.label}>Category</Text>
-              {categories.length > 0 ? (
-                <View style={styles.categoryRow}>
-                  {categories.map((cat) => {
-                    const selected = selectedCategory === cat.id;
-                    return (
-                      <TouchableOpacity
-                        key={cat.id}
-                        style={[
-                          styles.categoryChip,
-                          selected && styles.categoryChipSelected,
-                        ]}
-                        onPress={() => setSelectedCategory(cat.id)}
-                      >
-                        <Text
-                          style={[
-                            styles.categoryChipText,
-                            selected && styles.categoryChipTextSelected,
-                          ]}
-                        >
-                          {cat.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              ) : (
-                <Text style={styles.emptyCategoriesText}>
-                  No categories found. Add one on the web admin first.
-                </Text>
-              )}
-
-              <Text style={styles.label}>Image</Text>
-              <TouchableOpacity
-                style={styles.uploadBox}
-                onPress={pickImageFromPhone}
-              >
-                <Text style={styles.uploadText}>
-                  📷 Pick Photo from Camera/Gallery
-                </Text>
-              </TouchableOpacity>
-              {image ? (
-                <Image source={{ uri: image }} style={styles.previewImage} />
-              ) : null}
-
-              <View style={styles.switchRow}>
-                <Text style={styles.label}>Available</Text>
-                <Switch value={available} onValueChange={setAvailable} />
-              </View>
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={handleSaveItem}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.saveButtonText}>Save Item</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+            <View>
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statTitle}>{stat.title}</Text>
+            </View>
           </View>
+        ))}
+      </View>
+
+      {/* Recent Items */}
+      <Text style={styles.sectionTitle}>Recent Menu Items</Text>
+      {recentItems.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Ionicons name="restaurant-outline" size={40} color={colors.muted} />
+          <Text style={styles.emptyText}>No menu items yet</Text>
+          <Text style={styles.emptyHint}>Add your first item in the Menu tab</Text>
         </View>
-      </Modal>
-    </SafeAreaView>
+      ) : (
+        recentItems.map((item) => (
+          <View key={item.id} style={styles.recentCard}>
+            <View style={styles.recentIcon}>
+              <Ionicons name="restaurant-outline" size={20} color={colors.accent} />
+            </View>
+            <View style={styles.recentDetails}>
+              <Text style={styles.recentName}>{item.name}</Text>
+              <Text style={styles.recentCategory}>{item.categoryName}</Text>
+            </View>
+            <View style={styles.recentRight}>
+              <Text style={styles.recentPrice}>
+                {CURRENCY} {item.price.toFixed(2)}
+              </Text>
+              <Text
+                style={[
+                  styles.recentStatus,
+                  { color: item.available ? colors.green : colors.red },
+                ]}
+              >
+                {item.available ? 'Available' : 'Hidden'}
+              </Text>
+            </View>
+          </View>
+        ))
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1c1917',
+    backgroundColor: colors.bg,
     paddingHorizontal: 16,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#a8a29e',
-  },
-  logoutButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: '#292524',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#44403c',
-  },
-  logoutText: {
-    color: '#ef4444',
-    fontWeight: '600',
-  },
-  controlsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  searchInput: {
+  center: {
     flex: 1,
-    backgroundColor: '#292524',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#44403c',
-  },
-  addButton: {
-    backgroundColor: '#d97706',
-    borderRadius: 12,
-    paddingHorizontal: 20,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  addButtonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  itemCard: {
-    flexDirection: 'row',
-    backgroundColor: '#292524',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#44403c',
-  },
-  itemImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-  },
-  placeholderImage: {
-    backgroundColor: '#44403c',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  itemDetails: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  itemPrice: {
+  subtitle: {
+    color: colors.muted,
     fontSize: 14,
-    color: '#d97706',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  statusBadge: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  editButton: {
-    backgroundColor: '#44403c',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  editButtonText: {
-    color: '#ffffff',
-    fontSize: 12,
-  },
-  deleteButton: {
-    backgroundColor: '#7f1d1d',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  deleteButtonText: {
-    color: '#fca5a5',
-    fontWeight: 'bold',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#292524',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    maxHeight: '85%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    color: '#d6d3d1',
-    marginBottom: 6,
     marginTop: 12,
+    marginBottom: 16,
   },
-  modalInput: {
-    backgroundColor: '#1c1917',
-    borderWidth: 1,
-    borderColor: '#44403c',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: '#ffffff',
-  },
-  categoryRow: {
+  statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
+    gap: 12,
   },
-  categoryChip: {
-    backgroundColor: '#1c1917',
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#44403c',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderColor: colors.cardBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  categoryChipSelected: {
-    backgroundColor: '#d97706',
-    borderColor: '#d97706',
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  categoryChipText: {
-    color: '#d6d3d1',
+  statValue: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  statTitle: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  recentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  recentIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentDetails: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  recentName: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  recentCategory: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  recentRight: {
+    alignItems: 'flex-end',
+  },
+  recentPrice: {
+    color: colors.text,
+    fontWeight: '600',
     fontSize: 14,
   },
-  categoryChipTextSelected: {
-    color: '#ffffff',
-    fontWeight: '600',
+  recentStatus: {
+    fontSize: 11,
+    marginTop: 2,
   },
-  emptyCategoriesText: {
-    color: '#a8a29e',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  uploadBox: {
-    backgroundColor: '#1c1917',
-    borderWidth: 1,
-    borderColor: '#d97706',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 16,
+  emptyCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 32,
     alignItems: 'center',
-    marginTop: 4,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
-  uploadText: {
-    color: '#d97706',
+  emptyText: {
+    color: colors.text,
     fontWeight: '600',
-  },
-  previewImage: {
-    width: '100%',
-    height: 120,
-    borderRadius: 12,
+    fontSize: 16,
     marginTop: 12,
   },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    backgroundColor: '#44403c',
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  saveButton: {
-    flex: 1,
-    paddingVertical: 14,
-    backgroundColor: '#d97706',
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+  emptyHint: {
+    color: colors.muted,
+    fontSize: 13,
+    marginTop: 4,
   },
 });
