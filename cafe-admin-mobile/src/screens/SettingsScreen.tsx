@@ -7,14 +7,24 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { fetchWithAuth, getCsrfToken } from '../services/api';
 import { showAlert } from '../utils/notify';
+import { showToast } from '../utils/toast';
 import { colors, PRESET_COLORS } from '../theme';
 
+type Period = 'AM' | 'PM';
+
+interface HourField {
+  time: string;
+  period: Period;
+}
+
 interface TimeRange {
-  open: string;
-  close: string;
+  open: HourField;
+  close: HourField;
 }
 
 interface OpeningHours {
@@ -42,6 +52,26 @@ interface Settings {
   specialDescription: string;
 }
 
+const toHourField = (time24: string): HourField => {
+  const hour = parseInt(time24.split(':')[0], 10);
+  return {
+    time: time24 || '',
+    period: isNaN(hour) || hour < 12 ? 'AM' : 'PM',
+  };
+};
+
+const to24h = (field: HourField): string => {
+  const [hPart, mPart] = field.time.split(':');
+  let hour = parseInt(hPart, 10);
+  if (isNaN(hour)) return '00:00';
+  if (field.period === 'PM' && hour < 12) hour += 12;
+  if (field.period === 'AM' && hour === 12) hour = 0;
+  const minutes = isNaN(parseInt(mPart, 10))
+    ? '00'
+    : String(parseInt(mPart, 10)).padStart(2, '0');
+  return `${String(hour).padStart(2, '0')}:${minutes}`;
+};
+
 const defaultSettings: Settings = {
   name: '',
   tagline: '',
@@ -54,9 +84,9 @@ const defaultSettings: Settings = {
   facebook: '',
   twitter: '',
   openingHours: {
-    weekdays: { open: '08:00', close: '22:00' },
-    saturday: { open: '09:00', close: '23:00' },
-    sunday: { open: '09:00', close: '21:00' },
+    weekdays: { open: { time: '08:00', period: 'AM' }, close: { time: '10:00', period: 'PM' } },
+    saturday: { open: { time: '09:00', period: 'AM' }, close: { time: '11:00', period: 'PM' } },
+    sunday: { open: { time: '09:00', period: 'AM' }, close: { time: '09:00', period: 'PM' } },
   },
   aboutTitle: '',
   aboutDescription: '',
@@ -64,11 +94,6 @@ const defaultSettings: Settings = {
   specialPrice: '',
   specialDescription: '',
 };
-
-interface Toast {
-  text: string;
-  type: 'success' | 'error';
-}
 
 const sectionTitle = (title: string) => (
   <Text style={styles.sectionTitle}>{title}</Text>
@@ -81,6 +106,7 @@ function Field({
   placeholder,
   multiline,
   keyboardType,
+  secureTextEntry,
 }: {
   label: string;
   value: string;
@@ -88,6 +114,7 @@ function Field({
   placeholder?: string;
   multiline?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  secureTextEntry?: boolean;
 }) {
   return (
     <View style={styles.field}>
@@ -100,7 +127,48 @@ function Field({
         placeholderTextColor={colors.muted}
         multiline={multiline}
         keyboardType={keyboardType}
+        secureTextEntry={secureTextEntry}
       />
+    </View>
+  );
+}
+
+function HourInput({
+  value,
+  onChange,
+}: {
+  value: HourField;
+  onChange: (v: HourField) => void;
+}) {
+  return (
+    <View style={styles.hourInputGroup}>
+      <TextInput
+        style={[styles.input, styles.timeInput]}
+        value={value.time}
+        onChangeText={(time) => onChange({ ...value, time })}
+        keyboardType="numeric"
+        placeholder="08:00"
+        placeholderTextColor={colors.muted}
+        maxLength={5}
+      />
+      <View style={styles.periodToggle}>
+        {(['AM', 'PM'] as const).map((p) => (
+          <TouchableOpacity
+            key={p}
+            style={[styles.periodButton, value.period === p && styles.periodActive]}
+            onPress={() => onChange({ ...value, period: p })}
+          >
+            <Text
+              style={[
+                styles.periodText,
+                value.period === p && styles.periodTextActive,
+              ]}
+            >
+              {p}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }
@@ -109,7 +177,6 @@ export default function SettingsScreen() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState<Toast | null>(null);
 
   // Change password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -121,32 +188,22 @@ export default function SettingsScreen() {
     fetchSettings();
   }, []);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(t);
-  }, [toast]);
-
   const fetchSettings = async () => {
     try {
       const res = await fetchWithAuth('/cafe');
       if (res.ok) {
         const data = await res.json();
         const hours = data.openingHours as any;
-        const openingHours = hours?.monday
+        const toRange = (dayHours: any): TimeRange => ({
+          open: toHourField(dayHours?.open || '08:00'),
+          close: toHourField(dayHours?.close || '22:00'),
+        });
+
+        const openingHours: OpeningHours = hours?.monday
           ? {
-              weekdays: {
-                open: hours.monday?.open || defaultSettings.openingHours.weekdays.open,
-                close: hours.monday?.close || defaultSettings.openingHours.weekdays.close,
-              },
-              saturday: {
-                open: hours.saturday?.open || defaultSettings.openingHours.saturday.open,
-                close: hours.saturday?.close || defaultSettings.openingHours.saturday.close,
-              },
-              sunday: {
-                open: hours.sunday?.open || defaultSettings.openingHours.sunday.open,
-                close: hours.sunday?.close || defaultSettings.openingHours.sunday.close,
-              },
+              weekdays: toRange(hours.monday),
+              saturday: toRange(hours.saturday),
+              sunday: toRange(hours.sunday),
             }
           : (hours as OpeningHours) || defaultSettings.openingHours;
 
@@ -182,7 +239,11 @@ export default function SettingsScreen() {
   const update = (patch: Partial<Settings>) =>
     setSettings((prev) => ({ ...prev, ...patch }));
 
-  const updateHours = (day: keyof OpeningHours, field: 'open' | 'close', value: string) => {
+  const updateHours = (
+    day: keyof OpeningHours,
+    field: 'open' | 'close',
+    value: HourField
+  ) => {
     setSettings((prev) => ({
       ...prev,
       openingHours: {
@@ -194,8 +255,11 @@ export default function SettingsScreen() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    setToast(null);
     const { weekdays, saturday, sunday } = settings.openingHours;
+    const toDb = (range: TimeRange) => ({
+      open: to24h(range.open),
+      close: to24h(range.close),
+    });
     try {
       const res = await fetchWithAuth('/cafe', {
         method: 'PUT',
@@ -214,13 +278,13 @@ export default function SettingsScreen() {
             twitter: settings.twitter,
           },
           openingHours: {
-            monday: weekdays,
-            tuesday: weekdays,
-            wednesday: weekdays,
-            thursday: weekdays,
-            friday: weekdays,
-            saturday,
-            sunday,
+            monday: toDb(weekdays),
+            tuesday: toDb(weekdays),
+            wednesday: toDb(weekdays),
+            thursday: toDb(weekdays),
+            friday: toDb(weekdays),
+            saturday: toDb(saturday),
+            sunday: toDb(sunday),
           },
           aboutTitle: settings.aboutTitle,
           aboutDescription: settings.aboutDescription,
@@ -236,17 +300,17 @@ export default function SettingsScreen() {
       });
 
       if (res.ok) {
-        setToast({ text: 'Settings saved successfully!', type: 'success' });
+        showToast('Settings saved successfully!');
       } else {
         const errorData = await res.json();
         const message =
           typeof errorData.error === 'string'
             ? errorData.error
             : 'Failed to save settings';
-        setToast({ text: message, type: 'error' });
+        showToast(message, 'error');
       }
     } catch (e) {
-      setToast({ text: 'Failed to save settings', type: 'error' });
+      showToast('Failed to save settings', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -285,7 +349,7 @@ export default function SettingsScreen() {
 
       const data = await res.json();
       if (res.ok) {
-        showAlert('Success', 'Password changed successfully!');
+        showToast('Password changed successfully!');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -308,170 +372,160 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={styles.wrapper}>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {sectionTitle('Basic Info')}
-      <View style={styles.card}>
-        <Field label="Café Name" value={settings.name} onChangeText={(name) => update({ name })} />
-        <Field label="Tagline" value={settings.tagline} onChangeText={(tagline) => update({ tagline })} />
-      </View>
-
-      {sectionTitle('Contact Info')}
-      <View style={styles.card}>
-        <Field label="Address" value={settings.address} onChangeText={(address) => update({ address })} />
-        <Field label="Phone" value={settings.phone} onChangeText={(phone) => update({ phone })} keyboardType="phone-pad" />
-        <Field label="Email" value={settings.email} onChangeText={(email) => update({ email })} keyboardType="email-address" />
-      </View>
-
-      {sectionTitle('Branding Colors')}
-      <View style={styles.card}>
-        <Text style={styles.label}>Primary Color</Text>
-        <View style={styles.colorRow}>
-          <View style={[styles.colorSwatch, { backgroundColor: settings.primaryColor }]} />
-          <TextInput
-            style={[styles.input, styles.colorInput]}
-            value={settings.primaryColor}
-            onChangeText={(primaryColor) => update({ primaryColor })}
-            placeholder="#C9A962"
-            placeholderTextColor={colors.muted}
-            autoCapitalize="characters"
-          />
-        </View>
-        <View style={styles.presets}>
-          {PRESET_COLORS.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[
-                styles.presetDot,
-                { backgroundColor: c },
-                settings.primaryColor === c && styles.presetActive,
-              ]}
-              onPress={() => update({ primaryColor: c })}
-            />
-          ))}
+    <KeyboardAvoidingView
+      style={styles.wrapper}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        {sectionTitle('Basic Info')}
+        <View style={styles.card}>
+          <Field label="Café Name" value={settings.name} onChangeText={(name) => update({ name })} />
+          <Field label="Tagline" value={settings.tagline} onChangeText={(tagline) => update({ tagline })} />
         </View>
 
-        <Text style={styles.label}>Secondary Color</Text>
-        <View style={styles.colorRow}>
-          <View style={[styles.colorSwatch, { backgroundColor: settings.secondaryColor }]} />
-          <TextInput
-            style={[styles.input, styles.colorInput]}
-            value={settings.secondaryColor}
-            onChangeText={(secondaryColor) => update({ secondaryColor })}
-            placeholder="#3D2914"
-            placeholderTextColor={colors.muted}
-            autoCapitalize="characters"
-          />
+        {sectionTitle('Contact Info')}
+        <View style={styles.card}>
+          <Field label="Address" value={settings.address} onChangeText={(address) => update({ address })} />
+          <Field label="Phone" value={settings.phone} onChangeText={(phone) => update({ phone })} keyboardType="phone-pad" />
+          <Field label="Email" value={settings.email} onChangeText={(email) => update({ email })} keyboardType="email-address" />
         </View>
-        <View style={styles.presets}>
-          {PRESET_COLORS.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[
-                styles.presetDot,
-                { backgroundColor: c },
-                settings.secondaryColor === c && styles.presetActive,
-              ]}
-              onPress={() => update({ secondaryColor: c })}
-            />
-          ))}
-        </View>
-      </View>
 
-      {sectionTitle('Social Links')}
-      <View style={styles.card}>
-        <Field label="Instagram" value={settings.instagram} onChangeText={(instagram) => update({ instagram })} placeholder="https://instagram.com/..." />
-        <Field label="Facebook" value={settings.facebook} onChangeText={(facebook) => update({ facebook })} placeholder="https://facebook.com/..." />
-        <Field label="Twitter / X" value={settings.twitter} onChangeText={(twitter) => update({ twitter })} placeholder="https://twitter.com/..." />
-      </View>
-
-      {sectionTitle('Opening Hours')}
-      <View style={styles.card}>
-        {(['weekdays', 'saturday', 'sunday'] as const).map((day) => (
-          <View key={day} style={styles.hoursRow}>
-            <Text style={[styles.label, styles.hoursLabel]}>
-              {day === 'weekdays' ? 'Mon–Fri' : day === 'saturday' ? 'Saturday' : 'Sunday'}
-            </Text>
+        {sectionTitle('Branding Colors')}
+        <View style={styles.card}>
+          <Text style={styles.label}>Primary Color</Text>
+          <View style={styles.colorRow}>
+            <View style={[styles.colorSwatch, { backgroundColor: settings.primaryColor }]} />
             <TextInput
-              style={[styles.input, styles.timeInput]}
-              value={settings.openingHours[day].open}
-              onChangeText={(v) => updateHours(day, 'open', v)}
-              placeholder="08:00"
+              style={[styles.input, styles.colorInput]}
+              value={settings.primaryColor}
+              onChangeText={(primaryColor) => update({ primaryColor })}
+              placeholder="#C9A962"
               placeholderTextColor={colors.muted}
-            />
-            <Text style={styles.hoursTo}>to</Text>
-            <TextInput
-              style={[styles.input, styles.timeInput]}
-              value={settings.openingHours[day].close}
-              onChangeText={(v) => updateHours(day, 'close', v)}
-              placeholder="22:00"
-              placeholderTextColor={colors.muted}
+              autoCapitalize="characters"
             />
           </View>
-        ))}
-      </View>
+          <View style={styles.presets}>
+            {PRESET_COLORS.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.presetDot,
+                  { backgroundColor: c },
+                  settings.primaryColor === c && styles.presetActive,
+                ]}
+                onPress={() => update({ primaryColor: c })}
+              />
+            ))}
+          </View>
 
-      {sectionTitle('Daily Special')}
-      <View style={styles.card}>
-        <Field label="Special Name" value={settings.specialName} onChangeText={(specialName) => update({ specialName })} placeholder="Today's Special" />
-        <Field label="Price" value={settings.specialPrice} onChangeText={(specialPrice) => update({ specialPrice })} keyboardType="numeric" />
-        <Field label="Description" value={settings.specialDescription} onChangeText={(specialDescription) => update({ specialDescription })} multiline />
-      </View>
+          <Text style={styles.label}>Secondary Color</Text>
+          <View style={styles.colorRow}>
+            <View style={[styles.colorSwatch, { backgroundColor: settings.secondaryColor }]} />
+            <TextInput
+              style={[styles.input, styles.colorInput]}
+              value={settings.secondaryColor}
+              onChangeText={(secondaryColor) => update({ secondaryColor })}
+              placeholder="#3D2914"
+              placeholderTextColor={colors.muted}
+              autoCapitalize="characters"
+            />
+          </View>
+          <View style={styles.presets}>
+            {PRESET_COLORS.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.presetDot,
+                  { backgroundColor: c },
+                  settings.secondaryColor === c && styles.presetActive,
+                ]}
+                onPress={() => update({ secondaryColor: c })}
+              />
+            ))}
+          </View>
+        </View>
 
-      {sectionTitle('About Section')}
-      <View style={styles.card}>
-        <Field label="About Title" value={settings.aboutTitle} onChangeText={(aboutTitle) => update({ aboutTitle })} placeholder="Our Story" />
-        <Field label="About Description" value={settings.aboutDescription} onChangeText={(aboutDescription) => update({ aboutDescription })} multiline />
-      </View>
+        {sectionTitle('Social Links')}
+        <View style={styles.card}>
+          <Field label="Instagram" value={settings.instagram} onChangeText={(instagram) => update({ instagram })} placeholder="https://instagram.com/..." />
+          <Field label="Facebook" value={settings.facebook} onChangeText={(facebook) => update({ facebook })} placeholder="https://facebook.com/..." />
+          <Field label="Twitter / X" value={settings.twitter} onChangeText={(twitter) => update({ twitter })} placeholder="https://twitter.com/..." />
+        </View>
 
-      <TouchableOpacity
-        style={[styles.saveButton, isSaving && styles.buttonDisabled]}
-        onPress={handleSave}
-        disabled={isSaving}
-      >
-        {isSaving ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveButtonText}>Save Settings</Text>
-        )}
-      </TouchableOpacity>
+        {sectionTitle('Opening Hours')}
+        <View style={styles.card}>
+          {(['weekdays', 'saturday', 'sunday'] as const).map((day) => (
+            <View key={day} style={styles.dayRow}>
+              <Text style={[styles.label, styles.dayLabel]}>
+                {day === 'weekdays' ? 'Mon–Fri' : day === 'saturday' ? 'Saturday' : 'Sunday'}
+              </Text>
+              <View style={styles.hoursPair}>
+                <HourInput
+                  value={settings.openingHours[day].open}
+                  onChange={(v) => updateHours(day, 'open', v)}
+                />
+                <Text style={styles.hoursTo}>to</Text>
+                <HourInput
+                  value={settings.openingHours[day].close}
+                  onChange={(v) => updateHours(day, 'close', v)}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
 
-      {sectionTitle('Change Password')}
-      <View style={styles.card}>
-        <Text style={styles.passwordHint}>
-          Update your admin password. You'll use the new password next time you sign in.
-        </Text>
-        <Field label="Current Password" value={currentPassword} onChangeText={setCurrentPassword} placeholder="Enter current password" />
-        <Field label="New Password" value={newPassword} onChangeText={setNewPassword} placeholder="Min 8 chars, upper, lower, number, special" />
-        <Field label="Confirm New Password" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Re-enter new password" />
+        {sectionTitle('Daily Special')}
+        <View style={styles.card}>
+          <Field label="Special Name" value={settings.specialName} onChangeText={(specialName) => update({ specialName })} placeholder="Today's Special" />
+          <Field label="Price" value={settings.specialPrice} onChangeText={(specialPrice) => update({ specialPrice })} keyboardType="numeric" />
+          <Field label="Description" value={settings.specialDescription} onChangeText={(specialDescription) => update({ specialDescription })} multiline />
+        </View>
+
+        {sectionTitle('About Section')}
+        <View style={styles.card}>
+          <Field label="About Title" value={settings.aboutTitle} onChangeText={(aboutTitle) => update({ aboutTitle })} placeholder="Our Story" />
+          <Field label="About Description" value={settings.aboutDescription} onChangeText={(aboutDescription) => update({ aboutDescription })} multiline />
+        </View>
 
         <TouchableOpacity
-          style={[styles.changePasswordButton, isChangingPassword && styles.buttonDisabled]}
-          onPress={handleChangePassword}
-          disabled={isChangingPassword}
+          style={[styles.saveButton, isSaving && styles.buttonDisabled]}
+          onPress={handleSave}
+          disabled={isSaving}
         >
-          {isChangingPassword ? (
+          {isSaving ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.changePasswordText}>Change Password</Text>
+            <Text style={styles.saveButtonText}>Save Settings</Text>
           )}
         </TouchableOpacity>
-      </View>
-    </ScrollView>
 
-    {toast ? (
-      <View style={styles.toastOverlay} pointerEvents="none">
-        <View
-          style={[
-            styles.toastBox,
-            toast.type === 'error' ? styles.toastError : styles.toastSuccess,
-          ]}
-        >
-          <Text style={styles.toastText}>{toast.text}</Text>
+        {sectionTitle('Change Password')}
+        <View style={styles.card}>
+          <Text style={styles.passwordHint}>
+            Update your admin password. You'll use the new password next time you sign in.
+          </Text>
+          <Field label="Current Password" value={currentPassword} onChangeText={setCurrentPassword} placeholder="Enter current password" secureTextEntry />
+          <Field label="New Password" value={newPassword} onChangeText={setNewPassword} placeholder="Min 8 chars, upper, lower, number, special" secureTextEntry />
+          <Field label="Confirm New Password" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Re-enter new password" secureTextEntry />
+
+          <TouchableOpacity
+            style={[styles.changePasswordButton, isChangingPassword && styles.buttonDisabled]}
+            onPress={handleChangePassword}
+            disabled={isChangingPassword}
+          >
+            {isChangingPassword ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.changePasswordText}>Change Password</Text>
+            )}
+          </TouchableOpacity>
         </View>
-      </View>
-    ) : null}
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -493,39 +547,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  toastOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 100,
-  },
-  toastBox: {
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    maxWidth: '85%',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  toastSuccess: {
-    backgroundColor: '#14532d',
-  },
-  toastError: {
-    backgroundColor: '#7f1d1d',
-  },
-  toastText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    textAlign: 'center',
-    fontSize: 15,
   },
   sectionTitle: {
     color: colors.text,
@@ -596,22 +617,59 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ffffff',
   },
-  hoursRow: {
+  dayRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    marginBottom: 14,
   },
-  hoursLabel: {
-    width: 70,
+  dayLabel: {
+    width: 72,
+    marginTop: 12,
     marginBottom: 0,
   },
-  timeInput: {
+  hoursPair: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  hourInputGroup: {
+    flex: 1,
+  },
+  timeInput: {
     textAlign: 'center',
+    paddingVertical: 10,
+  },
+  periodToggle: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+    justifyContent: 'center',
+  },
+  periodButton: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+  },
+  periodActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  periodText: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  periodTextActive: {
+    color: '#ffffff',
   },
   hoursTo: {
     color: colors.muted,
+    marginTop: 12,
   },
   saveButton: {
     backgroundColor: colors.accent,

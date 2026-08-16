@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { fetchWithAuth } from '../services/api';
 import { showAlert } from '../utils/notify';
+import { showToast } from '../utils/toast';
 import { colors } from '../theme';
 
 interface ContactMessage {
@@ -72,6 +73,7 @@ export default function ContactScreen() {
             const res = await fetchWithAuth(`/contact/${id}`, { method: 'DELETE' });
             if (res.ok) {
               setMessages((prev) => prev.filter((m) => m.id !== id));
+              showToast('Message deleted');
             }
           } catch (e) {
             showAlert('Error', 'Failed to delete message');

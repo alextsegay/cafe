@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { fetchWithAuth } from '../services/api';
 import { showAlert } from '../utils/notify';
+import { showToast } from '../utils/toast';
 import { colors } from '../theme';
 
 interface GalleryImage {
@@ -93,6 +94,7 @@ export default function GalleryScreen() {
 
       if (createRes.ok) {
         fetchGallery();
+        showToast('Image added to gallery');
       } else {
         const errorData = await createRes.json();
         showAlert('Error', errorData.error || 'Failed to add image to gallery');
@@ -115,6 +117,7 @@ export default function GalleryScreen() {
             const res = await fetchWithAuth(`/gallery/${image.id}`, { method: 'DELETE' });
             if (res.ok) {
               setImages(images.filter((i) => i.id !== image.id));
+              showToast('Image removed from gallery');
             } else {
               const errorData = await res.json();
               showAlert('Error', errorData.error || 'Failed to delete image');

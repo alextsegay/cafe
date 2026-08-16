@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,16 +7,22 @@ import {
   ActivityIndicator,
   ScrollView,
   Share,
+  Platform,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { fetchWithAuth, API_BASE_URL } from '../services/api';
 import { showAlert } from '../utils/notify';
+import { showToast } from '../utils/toast';
 import { colors } from '../theme';
 
 export default function QRScreen() {
   const [menuUrl, setMenuUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const qrRef = useRef<any>(null);
 
   useEffect(() => {
     fetchCafe();
@@ -49,6 +55,45 @@ export default function QRScreen() {
     }
   };
 
+  const downloadQR = () => {
+    if (!qrRef.current?.toDataURL) {
+      showAlert('Error', 'QR code is not ready yet');
+      return;
+    }
+
+    setIsDownloading(true);
+    qrRef.current.toDataURL(async (base64: string) => {
+      try {
+        if (Platform.OS === 'web') {
+          // Browser: trigger a download via a data URL link.
+          const link = document.createElement('a');
+          link.href = `data:image/png;base64,${base64}`;
+          link.download = 'cafe-menu-qr.png';
+          link.click();
+          showToast('QR code downloaded');
+          return;
+        }
+
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status !== 'granted') {
+          showAlert('Permission Denied', 'Permission to save photos is required');
+          return;
+        }
+
+        const fileUri = (FileSystem.cacheDirectory || '') + 'cafe-menu-qr.png';
+        await FileSystem.writeAsStringAsync(fileUri, base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        await MediaLibrary.createAssetAsync(fileUri);
+        showToast('QR code saved to your photos');
+      } catch (e) {
+        showAlert('Error', 'Failed to save QR code');
+      } finally {
+        setIsDownloading(false);
+      }
+    });
+  };
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -62,7 +107,13 @@ export default function QRScreen() {
       <View style={styles.qrCard}>
         {menuUrl ? (
           <View style={styles.qrBox}>
-            <QRCode value={menuUrl} size={220} />
+            <QRCode
+              value={menuUrl}
+              size={220}
+              getRef={(c) => {
+                qrRef.current = c;
+              }}
+            />
           </View>
         ) : (
           <View style={[styles.qrBox, styles.qrPlaceholder]}>
@@ -80,10 +131,29 @@ export default function QRScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-          <Ionicons name="share-outline" size={18} color="#fff" />
-          <Text style={styles.shareButtonText}>Share Menu Link</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.primaryButton]}
+            onPress={downloadQR}
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="download-outline" size={18} color="#fff" />
+                <Text style={styles.actionButtonText}>Download QR</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+            <Ionicons name="share-outline" size={18} color={colors.text} />
+            <Text style={[styles.actionButtonText, { color: colors.text }]}>
+              Share Link
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.tipsCard}>
@@ -149,20 +219,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
-  shareButton: {
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginTop: 16,
+    width: '100%',
+  },
+  actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.accent,
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 13,
+    backgroundColor: colors.cardBorder,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
-  shareButtonText: {
+  primaryButton: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  actionButtonText: {
     color: '#ffffff',
     fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 14,
   },
   tipsCard: {
     backgroundColor: colors.card,

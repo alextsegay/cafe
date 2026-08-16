@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { fetchWithAuth } from '../services/api';
 import { showAlert } from '../utils/notify';
+import { showToast } from '../utils/toast';
 import { colors } from '../theme';
 
 interface Category {
@@ -83,6 +84,7 @@ export default function CategoriesScreen() {
       if (res.ok) {
         setModalVisible(false);
         fetchCategories();
+        showToast(editingCategory ? 'Category updated' : 'Category added');
       } else {
         const errorData = await res.json();
         showAlert('Save Failed', errorData.error || 'Failed to save category');
@@ -112,6 +114,7 @@ export default function CategoriesScreen() {
             const res = await fetchWithAuth(`/categories/${category.id}`, { method: 'DELETE' });
             if (res.ok) {
               fetchCategories();
+              showToast('Category deleted');
             } else {
               const errorData = await res.json();
               showAlert('Error', errorData.error || 'Failed to delete category');

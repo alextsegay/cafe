@@ -56,7 +56,7 @@ const tabIconNamesOutline: Record<string, keyof typeof Ionicons.glyphMap> = {
 function MoreStack({ onLogout }: { onLogout: () => void }) {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions}>
-      <Stack.Screen name="MoreHome" options={{ headerShown: false }}>
+      <Stack.Screen name="MoreHome" options={{ title: 'More' }}>
         {() => <MoreScreen onLogout={onLogout} />}
       </Stack.Screen>
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />

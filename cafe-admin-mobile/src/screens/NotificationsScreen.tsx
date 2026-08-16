@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { fetchWithAuth } from '../services/api';
 import { showAlert } from '../utils/notify';
+import { showToast } from '../utils/toast';
 import { colors } from '../theme';
 
 interface Notification {
@@ -77,6 +78,7 @@ export default function NotificationsScreen() {
       });
       if (res.ok) {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+        showToast('All notifications marked as read');
       }
     } catch (e) {
       showAlert('Error', 'Failed to mark notifications as read');
@@ -88,6 +90,7 @@ export default function NotificationsScreen() {
       const res = await fetchWithAuth(`/notifications/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setNotifications((prev) => prev.filter((n) => n.id !== id));
+        showToast('Notification deleted');
       }
     } catch (e) {
       showAlert('Error', 'Failed to delete notification');

@@ -12,10 +12,13 @@ import {
   ScrollView,
   Switch,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { fetchWithAuth } from '../services/api';
 import { showAlert } from '../utils/notify';
+import { showToast } from '../utils/toast';
 import { colors, CURRENCY } from '../theme';
 
 interface Category {
@@ -171,7 +174,7 @@ export default function MenuScreen() {
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
           setImage(uploadData.url);
-          showAlert('Success', 'Image uploaded successfully!');
+          showToast('Image uploaded successfully!');
         } else {
           const errorData = await uploadRes.json();
           showAlert('Upload Error', errorData.error || 'Failed to upload image');
@@ -219,6 +222,7 @@ export default function MenuScreen() {
       if (res.ok) {
         setModalVisible(false);
         fetchData();
+        showToast(editingItem ? 'Menu item updated' : 'Menu item added');
       } else {
         const errorData = await res.json();
         showAlert('Save Failed', JSON.stringify(errorData.error || errorData));
@@ -241,6 +245,7 @@ export default function MenuScreen() {
             const res = await fetchWithAuth(`/menu/${id}`, { method: 'DELETE' });
             if (res.ok) {
               fetchData();
+              showToast('Menu item deleted');
             } else {
               const errorData = await res.json();
               showAlert('Error', errorData.error || 'Failed to delete item');
@@ -351,7 +356,10 @@ export default function MenuScreen() {
       {/* Modal Form */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalContent}
+          >
             <ScrollView keyboardShouldPersistTaps="handled">
               <Text style={styles.modalTitle}>
                 {editingItem ? 'Edit Menu Item' : 'New Menu Item'}
@@ -505,7 +513,7 @@ export default function MenuScreen() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
