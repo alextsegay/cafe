@@ -12,6 +12,7 @@ export interface BankAccount {
   accountNumber: string
   branch?: string | null
   qrImage?: string | null
+  logo?: string | null
   visible: boolean
   order: number
 }
@@ -77,7 +78,7 @@ export default function BankPayments({ accounts }: { accounts: BankAccount[] }) 
         >
           <div className="flex items-center gap-4 mb-4">
             <img
-              src={getBankLogo(account.bankName)}
+              src={account.logo || getBankLogo(account.bankName)}
               alt={account.bankName}
               className="w-14 h-14 rounded-xl shadow-md shrink-0 object-cover"
             />

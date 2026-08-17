@@ -32,6 +32,7 @@ interface BankAccount {
   accountNumber: string;
   branch?: string | null;
   qrImage?: string | null;
+  logo?: string | null;
   visible: boolean;
   order: number;
 }
@@ -45,12 +46,14 @@ export default function BankAccountsScreen() {
   const [editing, setEditing] = useState<BankAccount | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingQr, setIsUploadingQr] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const [bankName, setBankName] = useState('');
   const [accountName, setAccountName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [branch, setBranch] = useState('');
   const [qrImage, setQrImage] = useState('');
+  const [logo, setLogo] = useState('');
   const [visible, setVisible] = useState(true);
 
   const fetchAccounts = async () => {
@@ -83,6 +86,7 @@ export default function BankAccountsScreen() {
       setAccountNumber(account.accountNumber);
       setBranch(account.branch || '');
       setQrImage(account.qrImage || '');
+      setLogo(account.logo || '');
       setVisible(account.visible);
     } else {
       setEditing(null);
@@ -91,12 +95,17 @@ export default function BankAccountsScreen() {
       setAccountNumber('');
       setBranch('');
       setQrImage('');
+      setLogo('');
       setVisible(true);
     }
     setModalVisible(true);
   };
 
-  const pickQrImage = async () => {
+  const pickAndUploadImage = async (
+    setter: (url: string) => void,
+    busy: (v: boolean) => void,
+    label: string
+  ) => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       showToast('Permission to access photos is required', 'error');
@@ -110,14 +119,14 @@ export default function BankAccountsScreen() {
 
     if (!result.canceled && result.assets[0]) {
       const localUri = result.assets[0].uri;
-      const filename = localUri.split('/').pop() || 'qr.jpg';
+      const filename = localUri.split('/').pop() || 'image.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image';
 
       const formData = new FormData();
       formData.append('file', { uri: localUri, name: filename, type } as any);
 
-      setIsUploadingQr(true);
+      busy(true);
       try {
         const uploadRes = await fetchWithAuth('/upload', {
           method: 'POST',
@@ -126,19 +135,22 @@ export default function BankAccountsScreen() {
 
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
-          setQrImage(uploadData.url);
-          showToast('QR image uploaded');
+          setter(uploadData.url);
+          showToast(`${label} uploaded`);
         } else {
           const errorData = await uploadRes.json();
-          showToast(errorData.error || 'Failed to upload QR image', 'error');
+          showToast(errorData.error || `Failed to upload ${label.toLowerCase()}`, 'error');
         }
       } catch (e) {
-        showToast('Failed to upload QR image', 'error');
+        showToast(`Failed to upload ${label.toLowerCase()}`, 'error');
       } finally {
-        setIsUploadingQr(false);
+        busy(false);
       }
     }
   };
+
+  const pickQrImage = () => pickAndUploadImage(setQrImage, setIsUploadingQr, 'QR image');
+  const pickLogo = () => pickAndUploadImage(setLogo, setIsUploadingLogo, 'Bank logo');
 
   const handleSave = async () => {
     if (!bankName || !accountName || !accountNumber) {
@@ -154,6 +166,7 @@ export default function BankAccountsScreen() {
         accountNumber,
         branch: branch || null,
         qrImage: qrImage || null,
+        logo: logo || null,
         visible,
       };
       const endpoint = editing ? `/bank-accounts/${editing.id}` : '/bank-accounts';
@@ -259,7 +272,9 @@ export default function BankAccountsScreen() {
       <View style={[styles.card, !item.visible && styles.cardHidden]}>
         <View style={styles.cardHeader}>
           <Image
-            source={{ uri: ASSET_BASE + getBankLogo(item.bankName) }}
+            source={{
+              uri: item.logo || ASSET_BASE + getBankLogo(item.bankName),
+            }}
             style={styles.bankIcon}
           />
           <View style={styles.cardTitleBlock}>
@@ -439,6 +454,42 @@ export default function BankAccountsScreen() {
                   placeholderTextColor={colors.muted}
                 />
               )}
+
+              <Text style={styles.label}>Bank Logo (upload the real one)</Text>
+              <View style={styles.qrUploadRow}>
+                {logo ? (
+                  <Image source={{ uri: logo }} style={styles.logoPreview} />
+                ) : (
+                  <View style={[styles.logoPreview, styles.logoPlaceholder]}>
+                    <Ionicons name="image-outline" size={22} color={colors.muted} />
+                  </View>
+                )}
+                <View style={styles.qrUploadButtons}>
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={pickLogo}
+                    disabled={isUploadingLogo}
+                  >
+                    {isUploadingLogo ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+                    )}
+                    <Text style={styles.uploadButtonText}>
+                      {isUploadingLogo ? 'Uploading…' : 'Upload logo'}
+                    </Text>
+                  </TouchableOpacity>
+                  {logo ? (
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => setLogo('')}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={colors.redText} />
+                      <Text style={styles.removeButtonText}>Remove</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
 
               <Text style={styles.label}>Account Name</Text>
               <TextInput
@@ -842,6 +893,19 @@ const styles = StyleSheet.create({
     height: 96,
     borderRadius: 10,
     backgroundColor: '#ffffff',
+  },
+  logoPreview: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+  },
+  logoPlaceholder: {
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   qrUploadButtons: {
     flex: 1,

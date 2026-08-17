@@ -9,6 +9,7 @@ const createAccountSchema = z.object({
   accountNumber: z.string().min(1, 'Account number is required').max(100),
   branch: z.string().max(120).nullable().optional(),
   qrImage: z.string().max(2000).nullable().optional(),
+  logo: z.string().max(2000).nullable().optional(),
   visible: z.boolean().optional(),
   order: z.number().int().optional(),
 })
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
         accountNumber: validated.accountNumber,
         branch: validated.branch || null,
         qrImage: validated.qrImage || null,
+        logo: validated.logo || null,
         visible: validated.visible !== false,
         order: validated.order ?? (maxOrder._max.order ?? -1) + 1,
       },
