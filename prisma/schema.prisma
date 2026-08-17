@@ -122,7 +122,7 @@ model BankAccount {
   accountName   String
   accountNumber String
   branch        String?
-  qrData        String?
+  qrImage       String?
   visible       Boolean  @default(true)
   order         Int      @default(0)
   createdAt     DateTime @default(now())

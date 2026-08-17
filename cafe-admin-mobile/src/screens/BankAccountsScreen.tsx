@@ -13,14 +13,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import QRCode from 'react-native-qrcode-svg';
-import { fetchWithAuth } from '../services/api';
+import * as ImagePicker from 'expo-image-picker';
+import { fetchWithAuth, API_BASE_URL } from '../services/api';
 import { showToast } from '../utils/toast';
-import { ETHIOPIAN_BANKS, getBankColor, getBankShort } from '../utils/ethiopianBanks';
+import { ETHIOPIAN_BANKS, getBankLogo } from '../utils/ethiopianBanks';
 import { colors } from '../theme';
+
+const ASSET_BASE = API_BASE_URL.replace(/\/api$/, '');
 
 interface BankAccount {
   id: string;
@@ -28,19 +31,10 @@ interface BankAccount {
   accountName: string;
   accountNumber: string;
   branch?: string | null;
-  qrData?: string | null;
+  qrImage?: string | null;
   visible: boolean;
   order: number;
 }
-
-const qrText = (account: BankAccount) =>
-  account.qrData ||
-  [
-    `Bank: ${account.bankName}`,
-    `Account Name: ${account.accountName}`,
-    `Account Number: ${account.accountNumber}`,
-    ...(account.branch ? [`Branch: ${account.branch}`] : []),
-  ].join('\n');
 
 export default function BankAccountsScreen() {
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
@@ -50,12 +44,13 @@ export default function BankAccountsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<BankAccount | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingQr, setIsUploadingQr] = useState(false);
 
   const [bankName, setBankName] = useState('');
   const [accountName, setAccountName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [branch, setBranch] = useState('');
-  const [qrData, setQrData] = useState('');
+  const [qrImage, setQrImage] = useState('');
   const [visible, setVisible] = useState(true);
 
   const fetchAccounts = async () => {
@@ -87,7 +82,7 @@ export default function BankAccountsScreen() {
       setAccountName(account.accountName);
       setAccountNumber(account.accountNumber);
       setBranch(account.branch || '');
-      setQrData(account.qrData || '');
+      setQrImage(account.qrImage || '');
       setVisible(account.visible);
     } else {
       setEditing(null);
@@ -95,10 +90,54 @@ export default function BankAccountsScreen() {
       setAccountName('');
       setAccountNumber('');
       setBranch('');
-      setQrData('');
+      setQrImage('');
       setVisible(true);
     }
     setModalVisible(true);
+  };
+
+  const pickQrImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      showToast('Permission to access photos is required', 'error');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const localUri = result.assets[0].uri;
+      const filename = localUri.split('/').pop() || 'qr.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image';
+
+      const formData = new FormData();
+      formData.append('file', { uri: localUri, name: filename, type } as any);
+
+      setIsUploadingQr(true);
+      try {
+        const uploadRes = await fetchWithAuth('/upload', {
+          method: 'POST',
+          body: formData,
+        }, 60000);
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          setQrImage(uploadData.url);
+          showToast('QR image uploaded');
+        } else {
+          const errorData = await uploadRes.json();
+          showToast(errorData.error || 'Failed to upload QR image', 'error');
+        }
+      } catch (e) {
+        showToast('Failed to upload QR image', 'error');
+      } finally {
+        setIsUploadingQr(false);
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -114,7 +153,7 @@ export default function BankAccountsScreen() {
         accountName,
         accountNumber,
         branch: branch || null,
-        qrData: qrData || null,
+        qrImage: qrImage || null,
         visible,
       };
       const endpoint = editing ? `/bank-accounts/${editing.id}` : '/bank-accounts';
@@ -164,8 +203,6 @@ export default function BankAccountsScreen() {
   };
 
   const handleDelete = (account: BankAccount) => {
-    showToast('Deleting bank account...', 'info');
-    // Confirm via the shared alert (native/web friendly)
     require('../utils/notify').showAlert(
       'Confirm Delete',
       `Delete the ${account.bankName} account?`,
@@ -218,13 +255,13 @@ export default function BankAccountsScreen() {
   };
 
   const renderItem = ({ item, index }: { item: BankAccount; index: number }) => {
-    const color = getBankColor(item.bankName);
     return (
       <View style={[styles.card, !item.visible && styles.cardHidden]}>
         <View style={styles.cardHeader}>
-          <View style={[styles.bankIcon, { backgroundColor: color }]}>
-            <Text style={styles.bankIconText}>{getBankShort(item.bankName)}</Text>
-          </View>
+          <Image
+            source={{ uri: ASSET_BASE + getBankLogo(item.bankName) }}
+            style={styles.bankIcon}
+          />
           <View style={styles.cardTitleBlock}>
             <View style={styles.bankNameRow}>
               <Text style={styles.bankName}>{item.bankName}</Text>
@@ -253,9 +290,14 @@ export default function BankAccountsScreen() {
         </View>
 
         <View style={styles.cardFooter}>
-          <View style={styles.qrWrap}>
-            <QRCode value={qrText(item)} size={72} backgroundColor="#ffffff" color="#1c1917" />
-          </View>
+          {item.qrImage ? (
+            <Image source={{ uri: item.qrImage }} style={styles.qrImage} />
+          ) : (
+            <View style={[styles.qrImage, styles.qrPlaceholder]}>
+              <Ionicons name="qr-code-outline" size={28} color={colors.muted} />
+              <Text style={styles.qrPlaceholderText}>No QR</Text>
+            </View>
+          )}
           <View style={styles.cardActions}>
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>
@@ -297,6 +339,8 @@ export default function BankAccountsScreen() {
       </View>
     );
   };
+
+  const selectedBankIsPreset = ETHIOPIAN_BANKS.some((b) => b.name === bankName);
 
   return (
     <View style={styles.container}>
@@ -370,7 +414,7 @@ export default function BankAccountsScreen() {
                   );
                 })}
                 <TouchableOpacity
-                  style={[styles.bankChip, (!bankName || ETHIOPIAN_BANKS.some((b) => b.name === bankName)) ? null : styles.bankChipActive]}
+                  style={[styles.bankChip, !selectedBankIsPreset && bankName ? styles.bankChipActive : null]}
                   onPress={() => setBankName('')}
                 >
                   <Ionicons name="create-outline" size={14} color={colors.muted} />
@@ -378,9 +422,17 @@ export default function BankAccountsScreen() {
                 </TouchableOpacity>
               </View>
 
-              {!ETHIOPIAN_BANKS.some((b) => b.name === bankName) && (
+              {selectedBankIsPreset ? (
+                <View style={styles.selectedBankRow}>
+                  <Image
+                    source={{ uri: ASSET_BASE + getBankLogo(bankName) }}
+                    style={styles.selectedBankLogo}
+                  />
+                  <Text style={styles.selectedBankName}>{bankName}</Text>
+                </View>
+              ) : (
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { marginTop: 8 }]}
                   value={bankName}
                   onChangeText={setBankName}
                   placeholder="Type bank name (e.g. Telebirr)"
@@ -416,15 +468,42 @@ export default function BankAccountsScreen() {
                 placeholderTextColor={colors.muted}
               />
 
-              <Text style={styles.label}>Custom QR Content (optional)</Text>
-              <TextInput
-                style={[styles.input, styles.multiline]}
-                value={qrData}
-                onChangeText={setQrData}
-                placeholder="Leave empty to auto-generate"
-                placeholderTextColor={colors.muted}
-                multiline
-              />
+              <Text style={styles.label}>Payment QR Image</Text>
+              <View style={styles.qrUploadRow}>
+                {qrImage ? (
+                  <Image source={{ uri: qrImage }} style={styles.qrPreview} />
+                ) : (
+                  <View style={[styles.qrPreview, styles.qrPlaceholder]}>
+                    <Ionicons name="qr-code-outline" size={30} color={colors.muted} />
+                    <Text style={styles.qrPlaceholderText}>No QR yet</Text>
+                  </View>
+                )}
+                <View style={styles.qrUploadButtons}>
+                  <TouchableOpacity
+                    style={styles.uploadButton}
+                    onPress={pickQrImage}
+                    disabled={isUploadingQr}
+                  >
+                    {isUploadingQr ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Ionicons name="image-outline" size={18} color="#fff" />
+                    )}
+                    <Text style={styles.uploadButtonText}>
+                      {isUploadingQr ? 'Uploading…' : 'Upload QR'}
+                    </Text>
+                  </TouchableOpacity>
+                  {qrImage ? (
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => setQrImage('')}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={colors.redText} />
+                      <Text style={styles.removeButtonText}>Remove</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
 
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>
@@ -516,16 +595,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   bankIcon: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bankIconText: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 13,
   },
   cardTitleBlock: {
     flex: 1,
@@ -589,10 +661,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
   },
-  qrWrap: {
-    backgroundColor: '#ffffff',
+  qrImage: {
+    width: 84,
+    height: 84,
     borderRadius: 10,
-    padding: 6,
+    backgroundColor: '#ffffff',
+  },
+  qrPlaceholder: {
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  qrPlaceholderText: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: '600',
   },
   cardActions: {
     flex: 1,
@@ -690,10 +777,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
   },
-  multiline: {
-    minHeight: 70,
-    textAlignVertical: 'top',
-  },
   bankChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -727,6 +810,72 @@ const styles = StyleSheet.create({
   },
   bankChipTextActive: {
     color: '#ffffff',
+  },
+  selectedBankRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+    backgroundColor: colors.inputBg,
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  selectedBankLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+  },
+  selectedBankName: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  qrUploadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  qrPreview: {
+    width: 96,
+    height: 96,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+  },
+  qrUploadButtons: {
+    flex: 1,
+    gap: 8,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  uploadButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  removeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  removeButtonText: {
+    color: colors.redText,
+    fontWeight: '600',
+    fontSize: 13,
   },
   modalActions: {
     flexDirection: 'row',

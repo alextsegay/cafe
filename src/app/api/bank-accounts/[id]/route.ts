@@ -8,7 +8,7 @@ const updateAccountSchema = z.object({
   accountName: z.string().min(1).max(200).optional(),
   accountNumber: z.string().min(1).max(100).optional(),
   branch: z.string().max(120).nullable().optional(),
-  qrData: z.string().max(2000).nullable().optional(),
+  qrImage: z.string().max(2000).nullable().optional(),
   visible: z.boolean().optional(),
   order: z.number().int().optional(),
 })
@@ -34,7 +34,7 @@ export async function PUT(
         accountName: validated.accountName,
         accountNumber: validated.accountNumber,
         branch: validated.branch,
-        qrData: validated.qrData,
+        qrImage: validated.qrImage,
         visible: validated.visible,
         order: validated.order,
       },

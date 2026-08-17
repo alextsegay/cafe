@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import QRCode from 'qrcode'
-import { Check, Copy, Landmark } from 'lucide-react'
-import { getBankColor } from '@/lib/ethiopian-banks'
+import { useState } from 'react'
+import { Check, Copy, Landmark, QrCode } from 'lucide-react'
+import { getBankLogo } from '@/lib/ethiopian-banks'
 import { useI18n } from '@/lib/i18n'
 
 export interface BankAccount {
@@ -12,49 +11,9 @@ export interface BankAccount {
   accountName: string
   accountNumber: string
   branch?: string | null
-  qrData?: string | null
+  qrImage?: string | null
   visible: boolean
   order: number
-}
-
-const qrText = (account: BankAccount) =>
-  account.qrData ||
-  [
-    `Bank: ${account.bankName}`,
-    `Account Name: ${account.accountName}`,
-    `Account Number: ${account.accountNumber}`,
-    ...(account.branch ? [`Branch: ${account.branch}`] : []),
-  ].join('\n')
-
-function QrImage({ text }: { text: string }) {
-  const [src, setSrc] = useState('')
-
-  useEffect(() => {
-    let active = true
-    QRCode.toDataURL(text, { width: 200, margin: 1, color: { dark: '#1c1917' } })
-      .then((url) => {
-        if (active) setSrc(url)
-      })
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [text])
-
-  if (!src) {
-    return (
-      <div className="w-[200px] h-[200px] rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-    )
-  }
-  return (
-    <img
-      src={src}
-      width={200}
-      height={200}
-      alt="Payment QR code"
-      className="rounded-xl bg-white p-2"
-    />
-  )
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -66,7 +25,6 @@ function CopyButton({ text }: { text: string }) {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text)
       } else {
-        // Fallback for non-secure contexts
         const textarea = document.createElement('textarea')
         textarea.value = text
         textarea.style.position = 'fixed'
@@ -112,67 +70,66 @@ export default function BankPayments({ accounts }: { accounts: BankAccount[] }) 
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {accounts.map((account) => {
-        const color = getBankColor(account.bankName)
-        const initials = account.bankName
-          .split(' ')
-          .map((w) => w[0])
-          .slice(0, 2)
-          .join('')
-          .toUpperCase()
-
-        return (
-          <div
-            key={account.id}
-            className="glass rounded-2xl p-6 card-hover flex flex-col"
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md shrink-0"
-                style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
-              >
-                {initials || '🏦'}
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg leading-tight">
-                  {account.bankName}
-                </h3>
-                {account.branch ? (
-                  <p className="text-xs text-muted-foreground">
-                    {t('pay.branch')}: {account.branch}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-[1fr_auto] gap-6 items-start">
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {t('pay.accountName')}
-                  </p>
-                  <p className="font-medium text-sm mt-0.5">{account.accountName}</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {t('pay.accountNumber')}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <p className="font-mono font-semibold text-sm tracking-wide">
-                      {account.accountNumber}
-                    </p>
-                    <CopyButton text={account.accountNumber} />
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <QrImage text={qrText(account)} />
-                <CopyButton text={qrText(account)} />
-              </div>
+      {accounts.map((account) => (
+        <div
+          key={account.id}
+          className="glass rounded-2xl p-6 card-hover flex flex-col"
+        >
+          <div className="flex items-center gap-4 mb-4">
+            <img
+              src={getBankLogo(account.bankName)}
+              alt={account.bankName}
+              className="w-14 h-14 rounded-xl shadow-md shrink-0 object-cover"
+            />
+            <div>
+              <h3 className="font-semibold text-lg leading-tight">
+                {account.bankName}
+              </h3>
+              {account.branch ? (
+                <p className="text-xs text-muted-foreground">
+                  {t('pay.branch')}: {account.branch}
+                </p>
+              ) : null}
             </div>
           </div>
-        )
-      })}
+
+          <div className="grid grid-cols-[1fr_auto] gap-6 items-start">
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t('pay.accountName')}
+                </p>
+                <p className="font-medium text-sm mt-0.5">{account.accountName}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t('pay.accountNumber')}
+                </p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <p className="font-mono font-semibold text-sm tracking-wide">
+                    {account.accountNumber}
+                  </p>
+                  <CopyButton text={account.accountNumber} />
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              {account.qrImage ? (
+                <img
+                  src={account.qrImage}
+                  alt={`${account.bankName} payment QR`}
+                  className="w-[200px] h-[200px] rounded-xl bg-white p-2 object-contain"
+                />
+              ) : (
+                <div className="w-[200px] h-[200px] rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-muted-foreground">
+                  <QrCode className="w-10 h-10 mb-2 opacity-50" />
+                  <span className="text-xs">QR coming soon</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

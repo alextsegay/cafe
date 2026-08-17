@@ -24,7 +24,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
               'w-full px-4 py-3 rounded-xl border bg-white/50 dark:bg-black/20 backdrop-blur-sm',
               'focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500',
               'transition-all duration-200 appearance-none cursor-pointer',
-              'pr-10',
+              'pr-10 text-gray-900 dark:text-gray-100',
               error 
                 ? 'border-red-500 focus:ring-red-500/50 focus:border-red-500' 
                 : 'border-gray-200 dark:border-gray-700',
@@ -33,7 +33,11 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             {...props}
           >
             {options.map(option => (
-              <option key={option.value} value={option.value}>
+              <option
+                key={option.value}
+                value={option.value}
+                className="bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100"
+              >
                 {option.label}
               </option>
             ))}

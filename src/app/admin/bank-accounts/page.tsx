@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Plus,
   Edit2,
@@ -9,12 +9,14 @@ import {
   ChevronUp,
   ChevronDown,
   Landmark,
-  Eye,
   EyeOff,
   Copy,
+  Upload,
+  X,
+  QrCode,
 } from 'lucide-react'
 import { Button, Input, Modal, Select, Toggle } from '@/components/ui'
-import { ETHIOPIAN_BANKS, getBankColor } from '@/lib/ethiopian-banks'
+import { ETHIOPIAN_BANKS, getBankLogo } from '@/lib/ethiopian-banks'
 
 interface BankAccount {
   id: string
@@ -22,7 +24,7 @@ interface BankAccount {
   accountName: string
   accountNumber: string
   branch?: string | null
-  qrData?: string | null
+  qrImage?: string | null
   visible: boolean
   order: number
 }
@@ -37,7 +39,7 @@ const emptyForm = {
   accountName: '',
   accountNumber: '',
   branch: '',
-  qrData: '',
+  qrImage: '',
   visible: true,
 }
 
@@ -47,8 +49,10 @@ export default function BankAccountsPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploadingQr, setIsUploadingQr] = useState(false)
   const [formData, setFormData] = useState(emptyForm)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const qrFileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchAccounts()
@@ -75,7 +79,7 @@ export default function BankAccountsPage() {
         accountName: account.accountName,
         accountNumber: account.accountNumber,
         branch: account.branch || '',
-        qrData: account.qrData || '',
+        qrImage: account.qrImage || '',
         visible: account.visible,
       })
     } else {
@@ -83,6 +87,26 @@ export default function BankAccountsPage() {
       setFormData(emptyForm)
     }
     setShowModal(true)
+  }
+
+  const uploadQrImage = async (file: File) => {
+    setIsUploadingQr(true)
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData })
+      if (res.ok) {
+        const data = await res.json()
+        setFormData((prev) => ({ ...prev, qrImage: data.url }))
+      } else {
+        alert('Failed to upload QR image')
+      }
+    } catch {
+      alert('Failed to upload QR image')
+    } finally {
+      setIsUploadingQr(false)
+      if (qrFileInput.current) qrFileInput.current.value = ''
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,7 +118,7 @@ export default function BankAccountsPage() {
       accountName: formData.accountName,
       accountNumber: formData.accountNumber,
       branch: formData.branch || null,
-      qrData: formData.qrData || null,
+      qrImage: formData.qrImage || null,
       visible: formData.visible,
     }
 
@@ -161,23 +185,16 @@ export default function BankAccountsPage() {
     const [item] = next.splice(index, 1)
     next.splice(target, 0, item)
 
-    // Optimistically reorder, then persist both orders.
     setAccounts(next)
-    const ids = next.map((a) => a.id)
     await Promise.all(
       next.map((a, i) =>
         fetch(`/api/bank-accounts/${a.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ order: i }),
-        }).catch(() => {})
+        }).catch(() => null)
       )
     )
-    // Restore if any update failed
-    const ok = await Promise.all(
-      ids.map(() => true)
-    )
-    if (!ok) fetchAccounts()
   }
 
   const copyNumber = async (account: BankAccount) => {
@@ -207,6 +224,10 @@ export default function BankAccountsPage() {
     )
   }
 
+  const selectedBankIsPreset = ETHIOPIAN_BANKS.some(
+    (b) => b.name === formData.bankName
+  )
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -226,99 +247,88 @@ export default function BankAccountsPage() {
 
       {/* Accounts List */}
       <div className="space-y-3">
-        {accounts.map((account, index) => {
-          const color = getBankColor(account.bankName)
-          const initials = account.bankName
-            .split(' ')
-            .map((w) => w[0])
-            .slice(0, 2)
-            .join('')
-            .toUpperCase()
-
-          return (
-            <div
-              key={account.id}
-              className={`glass rounded-2xl p-5 transition-opacity ${account.visible ? '' : 'opacity-60'}`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
-                  >
-                    {initials}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{account.bankName}</h3>
-                      {!account.visible && (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                          <EyeOff className="w-3 h-3" /> Hidden
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {account.accountName}
-                      {account.branch ? ` · ${account.branch}` : ''}
-                    </p>
-                    <p className="font-mono text-sm mt-0.5">
-                      {account.accountNumber}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => copyNumber(account)}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    title="Copy account number"
-                  >
-                    {copiedId === account.id ? (
-                      <span className="text-xs font-semibold text-green-600 px-1">
-                        Copied!
+        {accounts.map((account, index) => (
+          <div
+            key={account.id}
+            className={`glass rounded-2xl p-5 transition-opacity ${account.visible ? '' : 'opacity-60'}`}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <img
+                  src={getBankLogo(account.bankName)}
+                  alt={account.bankName}
+                  className="w-12 h-12 rounded-xl shadow-md shrink-0 object-cover"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{account.bankName}</h3>
+                    {!account.visible && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        <EyeOff className="w-3 h-3" /> Hidden
                       </span>
-                    ) : (
-                      <Copy className="w-4 h-4" />
                     )}
-                  </button>
-                  <div className="flex flex-col">
-                    <button
-                      onClick={() => move(index, -1)}
-                      disabled={index === 0}
-                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => move(index, 1)}
-                      disabled={index === accounts.length - 1}
-                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
                   </div>
-                  <Toggle
-                    checked={account.visible}
-                    onChange={() => toggleVisible(account)}
-                    label={account.visible ? 'Visible' : 'Hidden'}
-                  />
-                  <button
-                    onClick={() => openModal(account)}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(account.id)}
-                    className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {account.accountName}
+                    {account.branch ? ` · ${account.branch}` : ''}
+                  </p>
+                  <p className="font-mono text-sm mt-0.5">
+                    {account.accountNumber}
+                  </p>
                 </div>
               </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => copyNumber(account)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Copy account number"
+                >
+                  {copiedId === account.id ? (
+                    <span className="text-xs font-semibold text-green-600 px-1">
+                      Copied!
+                    </span>
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </button>
+                <div className="flex flex-col">
+                  <button
+                    onClick={() => move(index, -1)}
+                    disabled={index === 0}
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => move(index, 1)}
+                    disabled={index === accounts.length - 1}
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </div>
+                <Toggle
+                  checked={account.visible}
+                  onChange={() => toggleVisible(account)}
+                  label={account.visible ? 'Visible' : 'Hidden'}
+                />
+                <button
+                  onClick={() => openModal(account)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(account.id)}
+                  className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
 
       {accounts.length === 0 && (
@@ -341,32 +351,41 @@ export default function BankAccountsPage() {
         title={editingAccount ? 'Edit Bank Account' : 'Add Bank Account'}
       >
         <form onSubmit={handleSubmit} className="space-y-5">
-          <Select
-            label="Bank"
-            options={bankOptions}
-            value={
-              ETHIOPIAN_BANKS.some((b) => b.name === formData.bankName)
-                ? formData.bankName
-                : '__custom__'
-            }
-            onChange={(e) => {
-              const value = e.target.value
-              setFormData({
-                ...formData,
-                bankName: value === '__custom__' ? '' : value,
-              })
-            }}
-            required={formData.bankName ? false : true}
-          />
-          {!ETHIOPIAN_BANKS.some((b) => b.name === formData.bankName) && (
-            <Input
-              label="Bank Name (custom)"
-              value={formData.bankName}
-              onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-              placeholder="e.g. Telebirr, CBE Birr, another bank"
-              required
-            />
-          )}
+          <div>
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <Select
+                  label="Bank"
+                  options={bankOptions}
+                  value={selectedBankIsPreset ? formData.bankName : '__custom__'}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setFormData({
+                      ...formData,
+                      bankName: value === '__custom__' ? '' : value,
+                    })
+                  }}
+                />
+              </div>
+              {selectedBankIsPreset && (
+                <img
+                  src={getBankLogo(formData.bankName)}
+                  alt={formData.bankName}
+                  className="w-11 h-11 rounded-lg shadow-md object-cover mb-0.5"
+                />
+              )}
+            </div>
+            {!selectedBankIsPreset && (
+              <Input
+                label="Bank Name (custom)"
+                value={formData.bankName}
+                onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                placeholder="e.g. Telebirr, CBE Birr, another bank"
+                className="mt-3"
+                required
+              />
+            )}
+          </div>
 
           <Input
             label="Account Name"
@@ -388,12 +407,69 @@ export default function BankAccountsPage() {
             onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
             placeholder="e.g. Bole Branch"
           />
-          <Input
-            label="Custom QR Content (optional)"
-            value={formData.qrData}
-            onChange={(e) => setFormData({ ...formData, qrData: e.target.value })}
-            placeholder="Leave empty to auto-generate from the account details"
-          />
+
+          {/* QR Image Upload */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground/80">
+              Payment QR Image
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-white">
+                {formData.qrImage ? (
+                  <img
+                    src={formData.qrImage}
+                    alt="Payment QR"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center text-muted-foreground">
+                    <QrCode className="w-8 h-8 mb-1 opacity-50" />
+                    <span className="text-xs">No QR yet</span>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2 flex-1">
+                <input
+                  ref={qrFileInput}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) uploadQrImage(file)
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => qrFileInput.current?.click()}
+                  disabled={isUploadingQr}
+                  className="w-full"
+                >
+                  {isUploadingQr ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  Upload QR image
+                </Button>
+                {formData.qrImage && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setFormData((prev) => ({ ...prev, qrImage: '' }))}
+                    className="w-full"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Remove QR
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Upload the QR image your bank gives you (screenshot or export).
+                </p>
+              </div>
+            </div>
+          </div>
 
           <div className="flex items-center gap-3 pt-2">
             <Toggle
