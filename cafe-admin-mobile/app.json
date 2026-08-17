@@ -42,6 +42,14 @@
         {
           "color": "#d97706"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "abiFilters": ["arm64-v8a"]
+          }
+        }
       ]
     ],
     "ios": {
@@ -53,7 +61,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#1c1917",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
+        "backgroundImage": "./assets/android-icon-background.jpg",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
