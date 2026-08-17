@@ -10,9 +10,7 @@ export interface BankAccount {
   bankName: string
   accountName: string
   accountNumber: string
-  branch?: string | null
   qrImage?: string | null
-  logo?: string | null
   visible: boolean
   order: number
 }
@@ -78,7 +76,7 @@ export default function BankPayments({ accounts }: { accounts: BankAccount[] }) 
         >
           <div className="flex items-center gap-4 mb-4">
             <img
-              src={account.logo || getBankLogo(account.bankName)}
+              src={getBankLogo(account.bankName)}
               alt={account.bankName}
               className="w-14 h-14 rounded-xl shadow-md shrink-0 object-cover"
             />
@@ -86,11 +84,6 @@ export default function BankPayments({ accounts }: { accounts: BankAccount[] }) 
               <h3 className="font-semibold text-lg leading-tight">
                 {account.bankName}
               </h3>
-              {account.branch ? (
-                <p className="text-xs text-muted-foreground">
-                  {t('pay.branch')}: {account.branch}
-                </p>
-              ) : null}
             </div>
           </div>
 

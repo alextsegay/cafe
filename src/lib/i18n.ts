@@ -23,7 +23,6 @@ const translations: Translations = {
   'pay.subtitle': { en: 'Choose your bank and transfer easily. Scan the QR or copy the account number.', am: 'ባንክዎን ይምረጡ እና በቀላሉ ያስተላልፉ። QR ይቃኙ ወይም የመለያ ቁጥሩን ይቅዱ።' },
   'pay.accountName': { en: 'Account Name', am: 'የመለያ ስም' },
   'pay.accountNumber': { en: 'Account Number', am: 'የመለያ ቁጥር' },
-  'pay.branch': { en: 'Branch', am: 'ቅርንጫፍ' },
   'pay.copy': { en: 'Copy', am: 'ቅዳ' },
   'pay.copied': { en: 'Copied!', am: 'ተቀድቷል!' },
   'pay.noAccounts': { en: 'Payment accounts will be listed here soon.', am: 'የክፍያ መለያዎች በቅርቡ እዚህ ይዘረዘራሉ።' },

@@ -23,9 +23,7 @@ interface BankAccount {
   bankName: string
   accountName: string
   accountNumber: string
-  branch?: string | null
   qrImage?: string | null
-  logo?: string | null
   visible: boolean
   order: number
 }
@@ -39,9 +37,7 @@ const emptyForm = {
   bankName: '',
   accountName: '',
   accountNumber: '',
-  branch: '',
   qrImage: '',
-  logo: '',
   visible: true,
 }
 
@@ -52,11 +48,9 @@ export default function BankAccountsPage() {
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploadingQr, setIsUploadingQr] = useState(false)
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const [formData, setFormData] = useState(emptyForm)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const qrFileInput = useRef<HTMLInputElement>(null)
-  const logoFileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchAccounts()
@@ -82,9 +76,7 @@ export default function BankAccountsPage() {
         bankName: account.bankName,
         accountName: account.accountName,
         accountNumber: account.accountNumber,
-        branch: account.branch || '',
         qrImage: account.qrImage || '',
-        logo: account.logo || '',
         visible: account.visible,
       })
     } else {
@@ -94,7 +86,7 @@ export default function BankAccountsPage() {
     setShowModal(true)
   }
 
-  const uploadImage = async (file: File, key: 'qrImage' | 'logo', setter: (v: boolean) => void, inputRef: React.RefObject<HTMLInputElement>) => {
+  const uploadImage = async (file: File, setter: (v: boolean) => void, inputRef: React.RefObject<HTMLInputElement>) => {
     setter(true)
     try {
       const uploadFormData = new FormData()
@@ -102,7 +94,7 @@ export default function BankAccountsPage() {
       const res = await fetch('/api/upload', { method: 'POST', body: uploadFormData })
       if (res.ok) {
         const data = await res.json()
-        setFormData((prev) => ({ ...prev, [key]: data.url }))
+        setFormData((prev) => ({ ...prev, qrImage: data.url }))
       } else {
         alert('Failed to upload image')
       }
@@ -122,9 +114,7 @@ export default function BankAccountsPage() {
       bankName: formData.bankName,
       accountName: formData.accountName,
       accountNumber: formData.accountNumber,
-      branch: formData.branch || null,
       qrImage: formData.qrImage || null,
-      logo: formData.logo || null,
       visible: formData.visible,
     }
 
@@ -261,7 +251,7 @@ export default function BankAccountsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex items-center gap-4 flex-1 min-w-0">
                 <img
-                  src={account.logo || getBankLogo(account.bankName)}
+                  src={getBankLogo(account.bankName)}
                   alt={account.bankName}
                   className="w-12 h-12 rounded-xl shadow-md shrink-0 object-cover"
                 />
@@ -276,7 +266,6 @@ export default function BankAccountsPage() {
                   </div>
                   <p className="text-sm text-muted-foreground truncate">
                     {account.accountName}
-                    {account.branch ? ` · ${account.branch}` : ''}
                   </p>
                   <p className="font-mono text-sm mt-0.5">
                     {account.accountNumber}
@@ -407,72 +396,6 @@ export default function BankAccountsPage() {
             placeholder="e.g. 1000134567890"
             required
           />
-          <Input
-            label="Branch (optional)"
-            value={formData.branch}
-            onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-            placeholder="e.g. Bole Branch"
-          />
-
-          {/* Bank Logo Upload */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-foreground/80">
-              Bank Logo
-            </label>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center overflow-hidden bg-white shrink-0">
-                {formData.logo ? (
-                  <img
-                    src={formData.logo}
-                    alt="Bank logo"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <img
-                    src={getBankLogo(formData.bankName || 'Custom Bank')}
-                    alt="Placeholder logo"
-                    className="w-full h-full object-cover opacity-60"
-                  />
-                )}
-              </div>
-              <div className="space-y-2 flex-1">
-                <input
-                  ref={logoFileInput}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) uploadImage(file, 'logo', setIsUploadingLogo, logoFileInput)
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => logoFileInput.current?.click()}
-                  className="w-full"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload real logo
-                </Button>
-                {formData.logo && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setFormData((prev) => ({ ...prev, logo: '' }))}
-                    className="w-full"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Remove logo
-                  </Button>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Upload the bank's real logo (PNG with transparent background works best).
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* QR Image Upload */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground/80">
@@ -501,7 +424,7 @@ export default function BankAccountsPage() {
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) uploadImage(file, 'qrImage', setIsUploadingQr, qrFileInput)
+                    if (file) uploadImage(file, setIsUploadingQr, qrFileInput)
                   }}
                 />
                 <Button
