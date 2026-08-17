@@ -6,12 +6,15 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
-  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL, getCsrfToken, isTimeoutError } from '../services/api';
 import { setToken } from '../utils/storage';
-import { showAlert } from '../utils/notify';
+import { showToast } from '../utils/toast';
+import { registerPushToken } from '../utils/push';
 
 interface LoginResponse {
   success: boolean;
@@ -28,11 +31,12 @@ interface LoginResponse {
 export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      showAlert('Error', 'Please enter email and password');
+      showToast('Please enter your email and password', 'error');
       return;
     }
 
@@ -41,7 +45,7 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
       // Step 1: Get CSRF token
       const csrfToken = await getCsrfToken();
       if (!csrfToken) {
-        showAlert('Error', 'Failed to initialize session. Please try again.');
+        showToast('Failed to initialize session. Please try again.', 'error');
         setIsLoading(false);
         return;
       }
@@ -78,25 +82,29 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
         const jwtToken = data.token;
 
         if (!jwtToken) {
-          showAlert('Error', 'Server did not return an auth token. Please try again.');
+          showToast('Server did not return an auth token. Please try again.', 'error');
           return;
         }
 
         const stored = await setToken(jwtToken);
         if (!stored) {
-          showAlert('Error', 'Failed to save your session on this device.');
+          showToast('Failed to save your session on this device.', 'error');
           return;
         }
 
+        // Register this device for push notifications (contact alerts etc.).
+        registerPushToken();
         onLoginSuccess();
+      } else if (response.status === 429) {
+        showToast(data.error || 'Too many attempts. Try again in a few minutes.', 'error');
       } else {
-        showAlert('Login Failed', data.error || 'Invalid credentials');
+        showToast(data.error || 'Invalid email or password', 'error');
       }
     } catch (error) {
       if (isTimeoutError(error)) {
-        showAlert('Error', 'Request timed out. Please check your connection.');
+        showToast('Request timed out. Please check your connection.', 'error');
       } else {
-        showAlert('Error', 'Network error. Please check your connection.');
+        showToast('Network error. Please check your connection.', 'error');
       }
     } finally {
       setIsLoading(false);
@@ -104,51 +112,76 @@ export default function LoginScreen({ onLoginSuccess }: { onLoginSuccess: () => 
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>☕ Café Admin</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.card}>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logoText}>☕ Café Admin</Text>
+          </View>
+
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to manage your café menu</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="admin@cafemenu.com"
+              placeholderTextColor="#78716c"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password</Text>
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput]}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor="#78716c"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color="#a8a29e"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleLogin}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Sign In</Text>
+            )}
+          </TouchableOpacity>
         </View>
-
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>Sign in to manage your café menu</Text>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email Address</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="admin@cafemenu.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            secureTextEntry
-          />
-        </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -156,8 +189,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1c1917',
-    justifyContent: 'center',
     padding: 24,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   card: {
     backgroundColor: '#292524',
@@ -206,6 +242,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#ffffff',
+  },
+  passwordWrapper: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 48,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 14,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
   button: {
     backgroundColor: '#d97706',

@@ -16,9 +16,11 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import { fetchWithAuth } from '../services/api';
 import { showAlert } from '../utils/notify';
 import { showToast } from '../utils/toast';
+import { getDisplayLanguage, DisplayLanguage } from '../utils/storage';
 import { colors, CURRENCY } from '../theme';
 
 interface Category {
@@ -65,10 +67,31 @@ export default function MenuScreen() {
   const [isNew, setIsNew] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [language, setLanguage] = useState<DisplayLanguage>('en');
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Re-read the display language whenever this screen regains focus
+  // (e.g. after changing it in Settings).
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      getDisplayLanguage().then((lang) => {
+        if (active) setLanguage(lang);
+      });
+      return () => {
+        active = false;
+      };
+    }, [])
+  );
+
+  const displayName = (item: MenuItem) => {
+    if (language === 'am') return item.nameAm || item.name;
+    if (language === 'both' && item.nameAm) return `${item.name} / ${item.nameAm}`;
+    return item.name;
+  };
 
   const fetchData = async () => {
     if (!refreshing) setIsLoading(true);
@@ -103,7 +126,7 @@ export default function MenuScreen() {
         setCategories(catData);
       }
     } catch (error) {
-      showAlert('Error', 'Failed to fetch menu data');
+      showToast('Failed to fetch menu data', 'error');
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -146,7 +169,7 @@ export default function MenuScreen() {
   const pickImageFromPhone = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      showAlert('Permission Denied', 'Permission to access photos is required');
+      showToast('Permission to access photos is required', 'error');
       return;
     }
 
@@ -177,21 +200,21 @@ export default function MenuScreen() {
           showToast('Image uploaded successfully!');
         } else {
           const errorData = await uploadRes.json();
-          showAlert('Upload Error', errorData.error || 'Failed to upload image');
+          showToast(errorData.error || 'Failed to upload image', 'error');
         }
       } catch (e) {
-        showAlert('Error', 'Error uploading image');
+        showToast('Error uploading image', 'error');
       }
     }
   };
 
   const handleSaveItem = async () => {
     if (!name || !price) {
-      showAlert('Error', 'Name and price are required');
+      showToast('Name and price are required', 'error');
       return;
     }
     if (!selectedCategory) {
-      showAlert('Error', 'Please select a category');
+      showToast('Please select a category', 'error');
       return;
     }
 
@@ -225,10 +248,15 @@ export default function MenuScreen() {
         showToast(editingItem ? 'Menu item updated' : 'Menu item added');
       } else {
         const errorData = await res.json();
-        showAlert('Save Failed', JSON.stringify(errorData.error || errorData));
+        showToast(
+          typeof errorData.error === 'string'
+            ? errorData.error
+            : 'Failed to save item',
+          'error'
+        );
       }
     } catch (e) {
-      showAlert('Error', 'An error occurred saving item');
+      showToast('An error occurred saving item', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -248,10 +276,10 @@ export default function MenuScreen() {
               showToast('Menu item deleted');
             } else {
               const errorData = await res.json();
-              showAlert('Error', errorData.error || 'Failed to delete item');
+              showToast(errorData.error || 'Failed to delete item', 'error');
             }
           } catch (e) {
-            showAlert('Error', 'Failed to delete item');
+            showToast('Failed to delete item', 'error');
           }
         },
       },
@@ -287,6 +315,7 @@ export default function MenuScreen() {
         <FlatList
           data={filteredItems}
           keyExtractor={(item) => item.id}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -320,7 +349,7 @@ export default function MenuScreen() {
                     </View>
                   ) : null}
                 </View>
-                <Text style={styles.itemName}>{item.name}</Text>
+                <Text style={styles.itemName}>{displayName(item)}</Text>
                 <Text style={styles.itemPrice}>
                   {CURRENCY} {item.price.toFixed(2)}
                 </Text>
@@ -357,7 +386,7 @@ export default function MenuScreen() {
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.modalContent}
           >
             <ScrollView keyboardShouldPersistTaps="handled">

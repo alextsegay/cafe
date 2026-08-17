@@ -9,10 +9,20 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { fetchWithAuth, getCsrfToken } from '../services/api';
 import { showAlert } from '../utils/notify';
 import { showToast } from '../utils/toast';
+import {
+  getBiometricEnabled,
+  setBiometricEnabled,
+  getDisplayLanguage,
+  setDisplayLanguage,
+  DisplayLanguage,
+} from '../utils/storage';
 import { colors, PRESET_COLORS } from '../theme';
 
 type Period = 'AM' | 'PM';
@@ -45,27 +55,36 @@ interface Settings {
   facebook: string;
   twitter: string;
   openingHours: OpeningHours;
+  mapEmbed: string;
   aboutTitle: string;
   aboutDescription: string;
   specialName: string;
   specialPrice: string;
   specialDescription: string;
+  language: DisplayLanguage;
 }
 
+// 24h ("08:00" / "22:00") -> 12h display ("8:00" AM / "10:00" PM)
 const toHourField = (time24: string): HourField => {
-  const hour = parseInt(time24.split(':')[0], 10);
-  return {
-    time: time24 || '',
-    period: isNaN(hour) || hour < 12 ? 'AM' : 'PM',
-  };
+  const [hPart, mPart] = time24.split(':');
+  const hour = parseInt(hPart, 10);
+  if (isNaN(hour)) return { time: time24 || '8:00', period: 'AM' };
+  const minutes = mPart || '00';
+  const period: Period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return { time: `${hour12}:${minutes}`, period };
 };
 
+// 12h display ("8:00" AM) -> 24h storage ("08:00")
 const to24h = (field: HourField): string => {
   const [hPart, mPart] = field.time.split(':');
   let hour = parseInt(hPart, 10);
   if (isNaN(hour)) return '00:00';
-  if (field.period === 'PM' && hour < 12) hour += 12;
-  if (field.period === 'AM' && hour === 12) hour = 0;
+  if (hour === 12) {
+    hour = field.period === 'AM' ? 0 : 12;
+  } else if (field.period === 'PM') {
+    hour += 12;
+  }
   const minutes = isNaN(parseInt(mPart, 10))
     ? '00'
     : String(parseInt(mPart, 10)).padStart(2, '0');
@@ -84,15 +103,17 @@ const defaultSettings: Settings = {
   facebook: '',
   twitter: '',
   openingHours: {
-    weekdays: { open: { time: '08:00', period: 'AM' }, close: { time: '10:00', period: 'PM' } },
-    saturday: { open: { time: '09:00', period: 'AM' }, close: { time: '11:00', period: 'PM' } },
-    sunday: { open: { time: '09:00', period: 'AM' }, close: { time: '09:00', period: 'PM' } },
+    weekdays: { open: { time: '8:00', period: 'AM' }, close: { time: '10:00', period: 'PM' } },
+    saturday: { open: { time: '9:00', period: 'AM' }, close: { time: '11:00', period: 'PM' } },
+    sunday: { open: { time: '9:00', period: 'AM' }, close: { time: '9:00', period: 'PM' } },
   },
+  mapEmbed: '',
   aboutTitle: '',
   aboutDescription: '',
   specialName: '',
   specialPrice: '',
   specialDescription: '',
+  language: 'en',
 };
 
 const sectionTitle = (title: string) => (
@@ -116,19 +137,36 @@ function Field({
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   secureTextEntry?: boolean;
 }) {
+  const [hidden, setHidden] = useState(!!secureTextEntry);
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[styles.input, multiline && styles.multiline]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.muted}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-      />
+      <View>
+        <TextInput
+          style={[styles.input, multiline && styles.multiline, secureTextEntry && styles.inputWithEye]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.muted}
+          multiline={multiline}
+          keyboardType={keyboardType}
+          secureTextEntry={hidden}
+          autoCapitalize={secureTextEntry ? 'none' : undefined}
+        />
+        {secureTextEntry ? (
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons
+              name={hidden ? 'eye-outline' : 'eye-off-outline'}
+              size={20}
+              color={colors.muted}
+            />
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -147,7 +185,7 @@ function HourInput({
         value={value.time}
         onChangeText={(time) => onChange({ ...value, time })}
         keyboardType="numeric"
-        placeholder="08:00"
+        placeholder="8:00"
         placeholderTextColor={colors.muted}
         maxLength={5}
       />
@@ -173,10 +211,19 @@ function HourInput({
   );
 }
 
+const LANGUAGE_OPTIONS: { key: DisplayLanguage; label: string }[] = [
+  { key: 'en', label: 'English' },
+  { key: 'am', label: 'አማርኛ' },
+  { key: 'both', label: 'Both' },
+];
+
 export default function SettingsScreen() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [biometricEnabled, setBiometricEnabledState] = useState(false);
+  const [biometricSupported, setBiometricSupported] = useState(false);
 
   // Change password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -186,7 +233,29 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     fetchSettings();
+    loadDevicePreferences();
   }, []);
+
+  const loadDevicePreferences = async () => {
+    const [bio, lang] = await Promise.all([
+      getBiometricEnabled(),
+      getDisplayLanguage(),
+    ]);
+    setBiometricEnabledState(bio);
+    setSettings((prev) => ({ ...prev, language: lang }));
+
+    if (Platform.OS !== 'web') {
+      try {
+        const [hasHardware, enrolled] = await Promise.all([
+          LocalAuthentication.hasHardwareAsync(),
+          LocalAuthentication.isEnrolledAsync(),
+        ]);
+        setBiometricSupported(hasHardware && enrolled);
+      } catch (e) {
+        setBiometricSupported(false);
+      }
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -222,15 +291,17 @@ export default function SettingsScreen() {
           facebook: social?.facebook || '',
           twitter: social?.twitter || '',
           openingHours,
+          mapEmbed: data.mapEmbed || '',
           aboutTitle: data.aboutTitle || '',
           aboutDescription: data.aboutDescription || '',
           specialName: special?.name || '',
           specialPrice: special?.price || '',
           specialDescription: special?.description || '',
+          language: data.language === 'am' ? 'am' : data.language === 'both' ? 'both' : 'en',
         });
       }
     } catch (error) {
-      showAlert('Error', 'Failed to load settings');
+      showToast('Failed to load settings', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -253,6 +324,20 @@ export default function SettingsScreen() {
     }));
   };
 
+  const changeLanguage = (lang: DisplayLanguage) => {
+    update({ language: lang });
+    setDisplayLanguage(lang);
+  };
+
+  const toggleBiometric = async (value: boolean) => {
+    setBiometricEnabledState(value);
+    await setBiometricEnabled(value);
+    showToast(
+      value ? 'Biometric unlock enabled' : 'Biometric unlock disabled',
+      value ? 'success' : 'info'
+    );
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     const { weekdays, saturday, sunday } = settings.openingHours;
@@ -272,6 +357,7 @@ export default function SettingsScreen() {
           email: settings.email,
           primaryColor: settings.primaryColor,
           secondaryColor: settings.secondaryColor,
+          language: settings.language,
           socialLinks: {
             instagram: settings.instagram,
             facebook: settings.facebook,
@@ -286,6 +372,7 @@ export default function SettingsScreen() {
             saturday: toDb(saturday),
             sunday: toDb(sunday),
           },
+          mapEmbed: settings.mapEmbed,
           aboutTitle: settings.aboutTitle,
           aboutDescription: settings.aboutDescription,
           dailySpecial: {
@@ -318,11 +405,11 @@ export default function SettingsScreen() {
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword) {
-      showAlert('Error', 'Enter your current and new password');
+      showToast('Enter your current and new password', 'error');
       return;
     }
     if (newPassword !== confirmPassword) {
-      showAlert('Error', 'New passwords do not match');
+      showToast('New passwords do not match', 'error');
       return;
     }
 
@@ -330,7 +417,7 @@ export default function SettingsScreen() {
     try {
       const csrfToken = await getCsrfToken();
       if (!csrfToken) {
-        showAlert('Error', 'Failed to initialize session. Please try again.');
+        showToast('Failed to initialize session. Please try again.', 'error');
         return;
       }
 
@@ -354,10 +441,10 @@ export default function SettingsScreen() {
         setNewPassword('');
         setConfirmPassword('');
       } else {
-        showAlert('Error', data.error || 'Failed to change password');
+        showToast(data.error || 'Failed to change password', 'error');
       }
     } catch (e) {
-      showAlert('Error', 'Failed to change password. Please try again.');
+      showToast('Failed to change password. Please try again.', 'error');
     } finally {
       setIsChangingPassword(false);
     }
@@ -374,7 +461,7 @@ export default function SettingsScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.wrapper}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         style={styles.container}
@@ -456,7 +543,7 @@ export default function SettingsScreen() {
           <Field label="Twitter / X" value={settings.twitter} onChangeText={(twitter) => update({ twitter })} placeholder="https://twitter.com/..." />
         </View>
 
-        {sectionTitle('Opening Hours')}
+        {sectionTitle('Opening Hours (12-hour)')}
         <View style={styles.card}>
           {(['weekdays', 'saturday', 'sunday'] as const).map((day) => (
             <View key={day} style={styles.dayRow}>
@@ -478,6 +565,21 @@ export default function SettingsScreen() {
           ))}
         </View>
 
+        {sectionTitle('Map')}
+        <View style={styles.card}>
+          <Field
+            label="Map Embed"
+            value={settings.mapEmbed}
+            onChangeText={(mapEmbed) => update({ mapEmbed })}
+            placeholder="Paste the Google Maps embed code (<iframe>…)</iframe>"
+            multiline
+          />
+          <Text style={styles.hint}>
+            From Google Maps: Share → Embed a map → copy the code. It appears on your
+            website's contact page.
+          </Text>
+        </View>
+
         {sectionTitle('Daily Special')}
         <View style={styles.card}>
           <Field label="Special Name" value={settings.specialName} onChangeText={(specialName) => update({ specialName })} placeholder="Today's Special" />
@@ -489,6 +591,57 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <Field label="About Title" value={settings.aboutTitle} onChangeText={(aboutTitle) => update({ aboutTitle })} placeholder="Our Story" />
           <Field label="About Description" value={settings.aboutDescription} onChangeText={(aboutDescription) => update({ aboutDescription })} multiline />
+        </View>
+
+        {sectionTitle('Display Language')}
+        <View style={styles.card}>
+          <Text style={styles.hint}>
+            How menu items are shown in this app. Saved with your café settings.
+          </Text>
+          <View style={styles.languageRow}>
+            {LANGUAGE_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                style={[
+                  styles.languageButton,
+                  settings.language === opt.key && styles.languageActive,
+                ]}
+                onPress={() => changeLanguage(opt.key)}
+              >
+                <Text
+                  style={[
+                    styles.languageText,
+                    settings.language === opt.key && styles.languageTextActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {sectionTitle('Security')}
+        <View style={styles.card}>
+          <View style={styles.switchRow}>
+            <View style={styles.switchBody}>
+              <Text style={styles.switchTitle}>Unlock with Face ID / Fingerprint</Text>
+              <Text style={styles.switchSubtitle}>
+                {biometricSupported
+                  ? 'Skip the password when opening the app'
+                  : Platform.OS === 'web'
+                    ? 'Not available in the browser'
+                    : 'No biometrics set up on this device'}
+              </Text>
+            </View>
+            <Switch
+              value={biometricEnabled}
+              onValueChange={toggleBiometric}
+              disabled={!biometricSupported}
+              trackColor={{ false: colors.cardBorder, true: colors.accent }}
+              thumbColor="#ffffff"
+            />
+          </View>
         </View>
 
         <TouchableOpacity
@@ -505,7 +658,7 @@ export default function SettingsScreen() {
 
         {sectionTitle('Change Password')}
         <View style={styles.card}>
-          <Text style={styles.passwordHint}>
+          <Text style={styles.hint}>
             Update your admin password. You'll use the new password next time you sign in.
           </Text>
           <Field label="Current Password" value={currentPassword} onChangeText={setCurrentPassword} placeholder="Enter current password" secureTextEntry />
@@ -580,9 +733,25 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
   },
+  inputWithEye: {
+    paddingRight: 44,
+  },
   multiline: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  hint: {
+    color: colors.muted,
+    fontSize: 12,
+    marginBottom: 10,
+    lineHeight: 17,
   },
   colorRow: {
     flexDirection: 'row',
@@ -671,6 +840,50 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: 12,
   },
+  languageRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  languageButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.inputBg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+  },
+  languageActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  languageText: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  languageTextActive: {
+    color: '#ffffff',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  switchBody: {
+    flex: 1,
+  },
+  switchTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  switchSubtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 3,
+    lineHeight: 17,
+  },
   saveButton: {
     backgroundColor: colors.accent,
     borderRadius: 14,
@@ -685,11 +898,6 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
-  },
-  passwordHint: {
-    color: colors.muted,
-    fontSize: 13,
-    marginBottom: 12,
   },
   changePasswordButton: {
     backgroundColor: colors.cardBorder,

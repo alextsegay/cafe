@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme';
+import { navigationRef } from '../utils/navigation';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import MenuScreen from '../screens/MenuScreen';
@@ -14,6 +15,7 @@ import QRScreen from '../screens/QRScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import ContactScreen from '../screens/ContactScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import MenuPreviewScreen from '../screens/MenuPreviewScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -63,13 +65,14 @@ function MoreStack({ onLogout }: { onLogout: () => void }) {
       <Stack.Screen name="QRCode" component={QRScreen} options={{ title: 'QR Code' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="Contact" component={ContactScreen} options={{ title: 'Contact Messages' }} />
+      <Stack.Screen name="MenuPreview" component={MenuPreviewScreen} options={{ title: 'Menu Preview' }} />
     </Stack.Navigator>
   );
 }
 
 export default function AppNavigator({ onLogout }: { onLogout: () => void }) {
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerStyle: { backgroundColor: colors.card },

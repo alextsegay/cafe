@@ -3,6 +3,29 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import config from '@/lib/config'
 
+async function sendPushNotifications(title: string, body: string) {
+  try {
+    const tokens = await prisma.pushToken.findMany({ select: { token: true } })
+    if (tokens.length === 0) return
+
+    const messages = tokens.map((t) => ({
+      to: t.token,
+      sound: 'default',
+      title,
+      body,
+      data: { screen: 'Contact' },
+    }))
+
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(messages),
+    })
+  } catch (error) {
+    console.error('Failed to send push notifications:', error)
+  }
+}
+
 export async function GET() {
   try {
     const user = await getCurrentUser()
@@ -55,6 +78,12 @@ export async function POST(request: Request) {
       console.error('Failed to create notification:', notificationError)
       // Don't fail the message send if notification fails
     }
+
+    // Push notification to the admin's devices
+    await sendPushNotifications(
+      config.cafe.name ? `New message for ${config.cafe.name}` : 'New Contact Message',
+      `${name}: ${subject || message.slice(0, 80)}`
+    )
 
     return NextResponse.json(newMessage, { status: 201 })
   } catch (error) {
