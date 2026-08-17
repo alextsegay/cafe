@@ -18,6 +18,7 @@ import {
   ChevronRight,
   MessageSquare,
   Bell,
+  Landmark,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import config from '@/lib/config'
@@ -30,6 +31,7 @@ const navItems = [
   { href: '/admin/gallery', labelKey: 'admin.gallery', icon: Images },
   { href: '/admin/contact', labelKey: 'admin.messages', icon: MessageSquare },
   { href: '/admin/notifications', labelKey: 'admin.notifications', icon: Bell },
+  { href: '/admin/bank-accounts', labelKey: 'admin.bankAccounts', icon: Landmark },
   { href: '/admin/settings', labelKey: 'admin.settings', icon: Settings },
   { href: '/admin/qrcode', labelKey: 'admin.qrCode', icon: QrCode },
 ]

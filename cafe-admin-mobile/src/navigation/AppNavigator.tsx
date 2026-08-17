@@ -16,6 +16,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import ContactScreen from '../screens/ContactScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import MenuPreviewScreen from '../screens/MenuPreviewScreen';
+import BankAccountsScreen from '../screens/BankAccountsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -66,6 +67,7 @@ function MoreStack({ onLogout }: { onLogout: () => void }) {
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="Contact" component={ContactScreen} options={{ title: 'Contact Messages' }} />
       <Stack.Screen name="MenuPreview" component={MenuPreviewScreen} options={{ title: 'Menu Preview' }} />
+      <Stack.Screen name="BankAccounts" component={BankAccountsScreen} options={{ title: 'Bank Accounts' }} />
     </Stack.Navigator>
   );
 }

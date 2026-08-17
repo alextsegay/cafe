@@ -70,6 +70,9 @@ export function Navbar({ transparent = false, logo, cafeName }: NavbarProps) {
             <Link href="/contact" className="text-sm font-medium hover:text-amber-600 transition-colors">
               {t('nav.contact')}
             </Link>
+            <Link href="/pay" className="text-sm font-medium hover:text-amber-600 transition-colors">
+              {t('nav.pay')}
+            </Link>
             <div className="flex items-center gap-2 ml-4">
               <button
                 onClick={() => setLanguage(language === 'en' ? 'am' : 'en')}
@@ -158,6 +161,13 @@ export function Navbar({ transparent = false, logo, cafeName }: NavbarProps) {
             onClick={() => setIsOpen(false)}
           >
             {t('nav.contact')}
+          </Link>
+          <Link
+            href="/pay"
+            className="block py-2 text-sm font-medium hover:text-amber-600 transition-colors"
+            onClick={() => setIsOpen(false)}
+          >
+            {t('nav.pay')}
           </Link>
           <button
             onClick={() => { setLanguage(language === 'en' ? 'am' : 'en'); setIsOpen(false) }}

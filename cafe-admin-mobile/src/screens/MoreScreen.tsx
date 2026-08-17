@@ -13,6 +13,7 @@ type MoreStackParamList = {
   Notifications: undefined;
   Contact: undefined;
   MenuPreview: undefined;
+  BankAccounts: undefined;
 };
 
 interface Row {
@@ -27,6 +28,7 @@ const rows: Row[] = [
   { key: 'Settings', title: 'Settings', subtitle: 'Café info, branding, hours, password', icon: 'settings-outline', color: colors.accent },
   { key: 'QRCode', title: 'QR Code', subtitle: 'Digital menu QR for your customers', icon: 'qr-code-outline', color: '#a855f7' },
   { key: 'MenuPreview', title: 'Preview Menu', subtitle: 'See the menu like your customers do', icon: 'eye-outline', color: '#f59e0b' },
+  { key: 'BankAccounts', title: 'Bank Accounts', subtitle: 'Payment accounts for your Pay page', icon: 'card-outline', color: '#14b8a6' },
   { key: 'Notifications', title: 'Notifications', subtitle: 'Alerts and updates', icon: 'notifications-outline', color: '#3b82f6' },
   { key: 'Contact', title: 'Contact Messages', subtitle: 'Messages from your contact form', icon: 'mail-outline', color: '#22c55e' },
 ];
